@@ -1,0 +1,45 @@
+- generic [active] [ref=e1]:
+  - complementary [ref=e2]:
+    - link "Binzbonz" [ref=e3] [cursor=pointer]:
+      - /url: /projects
+    - navigation [ref=e4]:
+      - link "Projects" [ref=e5] [cursor=pointer]:
+        - /url: /projects
+  - main [ref=e6]:
+    - generic [ref=e7]:
+      - generic [ref=e8]:
+        - generic [ref=e9]:
+          - heading "Realtime Test" [level=1] [ref=e10]
+          - generic [ref=e11]: active
+        - paragraph [ref=e12]: Testing SSE
+      - generic [ref=e13]:
+        - link "Board" [ref=e14] [cursor=pointer]:
+          - /url: /projects/8fab222c-804a-458e-9001-c7070333273f
+        - link "Tree" [ref=e15] [cursor=pointer]:
+          - /url: /projects/8fab222c-804a-458e-9001-c7070333273f/tree
+        - link "Agents" [ref=e16] [cursor=pointer]:
+          - /url: /projects/8fab222c-804a-458e-9001-c7070333273f/agents
+      - generic [ref=e17]:
+        - generic [ref=e18]:
+          - generic [ref=e19]:
+            - generic [ref=e20]: backlog
+            - generic [ref=e21]: (1)
+          - button "Realtime task Unassigned" [ref=e23] [cursor=pointer]:
+            - paragraph [ref=e24]: Realtime task
+            - generic [ref=e26]: Unassigned
+        - generic [ref=e28]:
+          - generic [ref=e29]: assigned
+          - generic [ref=e30]: (0)
+        - generic [ref=e32]:
+          - generic [ref=e33]: in progress
+          - generic [ref=e34]: (0)
+        - generic [ref=e36]:
+          - generic [ref=e37]: blocked
+          - generic [ref=e38]: (0)
+        - generic [ref=e40]:
+          - generic [ref=e41]: review request
+          - generic [ref=e42]: (0)
+        - generic [ref=e44]:
+          - generic [ref=e45]: done
+          - generic [ref=e46]: (0)
+  - alert [ref=e47]

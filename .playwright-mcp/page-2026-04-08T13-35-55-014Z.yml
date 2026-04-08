@@ -1,0 +1,29 @@
+- generic [active] [ref=e1]:
+  - complementary [ref=e2]:
+    - link "Binzbonz" [ref=e3] [cursor=pointer]:
+      - /url: /projects
+    - navigation [ref=e4]:
+      - link "Projects" [ref=e5] [cursor=pointer]:
+        - /url: /projects
+  - main [ref=e6]:
+    - generic [ref=e7]:
+      - generic [ref=e8]:
+        - generic [ref=e9]:
+          - heading "Ticket Type Test" [level=1] [ref=e10]
+          - combobox [ref=e11] [cursor=pointer]:
+            - option "analysing" [selected]
+            - option "paused"
+            - option "active"
+            - option "completed"
+        - paragraph [ref=e12]: Test hierarchy creation
+      - generic [ref=e13]:
+        - generic [ref=e14]:
+          - link "Board" [ref=e15] [cursor=pointer]:
+            - /url: /projects/7a239ce3-a3f0-487c-84bb-eb1276a03b20
+          - link "Tree" [ref=e16] [cursor=pointer]:
+            - /url: /projects/7a239ce3-a3f0-487c-84bb-eb1276a03b20/tree
+          - link "Agents" [ref=e17] [cursor=pointer]:
+            - /url: /projects/7a239ce3-a3f0-487c-84bb-eb1276a03b20/agents
+        - button "+ New Task" [ref=e18] [cursor=pointer]
+      - paragraph [ref=e19]: No tasks yet. Click "+ New Task" to create one.
+  - alert [ref=e20]

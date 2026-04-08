@@ -1,0 +1,49 @@
+- generic [active] [ref=e1]:
+  - complementary [ref=e2]:
+    - link "Binzbonz" [ref=e3] [cursor=pointer]:
+      - /url: /projects
+    - navigation [ref=e4]:
+      - link "Projects" [ref=e5] [cursor=pointer]:
+        - /url: /projects
+  - main [ref=e6]:
+    - generic [ref=e7]:
+      - generic [ref=e8]:
+        - generic [ref=e9]:
+          - heading "E2E Todo App" [level=1] [ref=e10]
+          - generic [ref=e11]: active
+        - paragraph [ref=e12]: Build a todo application with CRUD operations
+      - generic [ref=e13]:
+        - link "Board" [ref=e14] [cursor=pointer]:
+          - /url: /projects/28066a88-851e-405c-86e8-4acdd31e6cbc
+        - link "Tree" [ref=e15] [cursor=pointer]:
+          - /url: /projects/28066a88-851e-405c-86e8-4acdd31e6cbc/tree
+        - link "Agents" [ref=e16] [cursor=pointer]:
+          - /url: /projects/28066a88-851e-405c-86e8-4acdd31e6cbc/agents
+      - generic [ref=e17]:
+        - generic [ref=e18]:
+          - generic [ref=e19]:
+            - generic [ref=e20]: backlog
+            - generic [ref=e21]: (1)
+          - button "Build todo API Unassigned" [ref=e23] [cursor=pointer]:
+            - paragraph [ref=e24]: Build todo API
+            - generic [ref=e26]: Unassigned
+        - generic [ref=e27]:
+          - generic [ref=e28]:
+            - generic [ref=e29]: assigned
+            - generic [ref=e30]: (1)
+          - button "Create todo model dev-1" [ref=e32] [cursor=pointer]:
+            - paragraph [ref=e33]: Create todo model
+            - generic [ref=e35]: dev-1
+        - generic [ref=e37]:
+          - generic [ref=e38]: in progress
+          - generic [ref=e39]: (0)
+        - generic [ref=e41]:
+          - generic [ref=e42]: blocked
+          - generic [ref=e43]: (0)
+        - generic [ref=e45]:
+          - generic [ref=e46]: review request
+          - generic [ref=e47]: (0)
+        - generic [ref=e49]:
+          - generic [ref=e50]: done
+          - generic [ref=e51]: (0)
+  - alert [ref=e52]

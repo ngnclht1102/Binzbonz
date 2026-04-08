@@ -1,0 +1,21 @@
+{
+  "name": "@binzbonz/agent-runner",
+  "version": "0.0.1",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "tsx watch src/index.ts",
+    "build": "tsup src/index.ts --format esm --dts --outDir dist",
+    "start": "node dist/index.js",
+    "lint": "echo 'no lint configured'"
+  },
+  "dependencies": {
+    "execa": "^9.6.1"
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "tsup": "^8.3.0",
+    "tsx": "^4.19.0",
+    "typescript": "^5.7.0"
+  }
+}

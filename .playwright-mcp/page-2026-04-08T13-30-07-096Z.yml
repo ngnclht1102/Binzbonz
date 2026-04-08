@@ -1,0 +1,47 @@
+- generic [active] [ref=e1]:
+  - complementary [ref=e2]:
+    - link "Binzbonz" [ref=e3] [cursor=pointer]:
+      - /url: /projects
+    - navigation [ref=e4]:
+      - link "Projects" [ref=e5] [cursor=pointer]:
+        - /url: /projects
+  - main [ref=e6]:
+    - generic [ref=e7]:
+      - generic [ref=e8]:
+        - generic [ref=e9]:
+          - heading "UI Task Test" [level=1] [ref=e10]
+          - generic [ref=e11]: analysing
+        - paragraph [ref=e12]: Testing task creation from UI
+      - generic [ref=e13]:
+        - generic [ref=e14]:
+          - link "Board" [ref=e15] [cursor=pointer]:
+            - /url: /projects/e5fced8d-5f43-4525-bf37-d0e40c2c4939
+          - link "Tree" [ref=e16] [cursor=pointer]:
+            - /url: /projects/e5fced8d-5f43-4525-bf37-d0e40c2c4939/tree
+          - link "Agents" [ref=e17] [cursor=pointer]:
+            - /url: /projects/e5fced8d-5f43-4525-bf37-d0e40c2c4939/agents
+        - button "+ New Task" [ref=e18] [cursor=pointer]
+      - generic [ref=e30]:
+        - generic [ref=e31]:
+          - generic [ref=e32]:
+            - generic [ref=e33]: backlog
+            - generic [ref=e34]: (1)
+          - button "Build login page Unassigned" [ref=e36] [cursor=pointer]:
+            - paragraph [ref=e37]: Build login page
+            - generic [ref=e39]: Unassigned
+        - generic [ref=e41]:
+          - generic [ref=e42]: assigned
+          - generic [ref=e43]: (0)
+        - generic [ref=e45]:
+          - generic [ref=e46]: in progress
+          - generic [ref=e47]: (0)
+        - generic [ref=e49]:
+          - generic [ref=e50]: blocked
+          - generic [ref=e51]: (0)
+        - generic [ref=e53]:
+          - generic [ref=e54]: review request
+          - generic [ref=e55]: (0)
+        - generic [ref=e57]:
+          - generic [ref=e58]: done
+          - generic [ref=e59]: (0)
+  - alert [ref=e20]

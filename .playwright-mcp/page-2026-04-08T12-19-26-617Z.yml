@@ -1,0 +1,5 @@
+- generic [active] [ref=e1]:
+  - generic [ref=e2]:
+    - heading "Projects" [level=1] [ref=e3]
+    - paragraph [ref=e4]: No projects yet.
+  - alert [ref=e5]

@@ -1,0 +1,15 @@
+- generic [active] [ref=e1]:
+  - complementary [ref=e2]:
+    - link "Binzbonz" [ref=e3] [cursor=pointer]:
+      - /url: /projects
+    - navigation [ref=e4]:
+      - link "Projects" [ref=e5] [cursor=pointer]:
+        - /url: /projects
+  - main [ref=e6]:
+    - generic [ref=e7]:
+      - generic [ref=e8]:
+        - heading "Projects" [level=1] [ref=e9]
+        - link "New Project" [ref=e10] [cursor=pointer]:
+          - /url: /projects/new
+      - paragraph [ref=e11]: No projects yet.
+  - alert [ref=e12]

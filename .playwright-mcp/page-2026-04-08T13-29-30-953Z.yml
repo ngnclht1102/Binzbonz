@@ -1,0 +1,25 @@
+- generic [active] [ref=e1]:
+  - complementary [ref=e2]:
+    - link "Binzbonz" [ref=e3] [cursor=pointer]:
+      - /url: /projects
+    - navigation [ref=e4]:
+      - link "Projects" [ref=e5] [cursor=pointer]:
+        - /url: /projects
+  - main [ref=e6]:
+    - generic [ref=e7]:
+      - generic [ref=e8]:
+        - generic [ref=e9]:
+          - heading "UI Task Test" [level=1] [ref=e10]
+          - generic [ref=e11]: analysing
+        - paragraph [ref=e12]: Testing task creation from UI
+      - generic [ref=e13]:
+        - generic [ref=e14]:
+          - link "Board" [ref=e15] [cursor=pointer]:
+            - /url: /projects/e5fced8d-5f43-4525-bf37-d0e40c2c4939
+          - link "Tree" [ref=e16] [cursor=pointer]:
+            - /url: /projects/e5fced8d-5f43-4525-bf37-d0e40c2c4939/tree
+          - link "Agents" [ref=e17] [cursor=pointer]:
+            - /url: /projects/e5fced8d-5f43-4525-bf37-d0e40c2c4939/agents
+        - button "+ New Task" [ref=e18] [cursor=pointer]
+      - paragraph [ref=e19]: No tasks yet. Click "+ New Task" to create one.
+  - alert [ref=e20]

@@ -1,0 +1,55 @@
+- generic [active] [ref=e1]:
+  - complementary [ref=e2]:
+    - link "Binzbonz" [ref=e3] [cursor=pointer]:
+      - /url: /projects
+    - navigation [ref=e4]:
+      - link "Projects" [ref=e5] [cursor=pointer]:
+        - /url: /projects
+  - main [ref=e6]:
+    - generic [ref=e7]:
+      - generic [ref=e8]:
+        - generic [ref=e9]:
+          - heading "Board Test" [level=1] [ref=e10]
+          - generic [ref=e11]: active
+        - paragraph [ref=e12]: Testing board view
+      - generic [ref=e13]:
+        - link "Board" [ref=e14] [cursor=pointer]:
+          - /url: /projects/22d0602c-1741-4e2c-a491-5a936e7c6b20
+        - link "Tree" [ref=e15] [cursor=pointer]:
+          - /url: /projects/22d0602c-1741-4e2c-a491-5a936e7c6b20/tree
+        - link "Agents" [ref=e16] [cursor=pointer]:
+          - /url: /projects/22d0602c-1741-4e2c-a491-5a936e7c6b20/agents
+      - generic [ref=e17]:
+        - generic [ref=e18]:
+          - generic [ref=e19]:
+            - generic [ref=e20]: backlog
+            - generic [ref=e21]: (2)
+          - generic [ref=e22]:
+            - button "Setup database Unassigned 1 subtask" [ref=e23] [cursor=pointer]:
+              - paragraph [ref=e24]: Setup database
+              - generic [ref=e25]:
+                - generic [ref=e26]: Unassigned
+                - generic [ref=e27]: 1 subtask
+            - button "Write tests Unassigned" [ref=e28] [cursor=pointer]:
+              - paragraph [ref=e29]: Write tests
+              - generic [ref=e31]: Unassigned
+        - generic [ref=e33]:
+          - generic [ref=e34]: assigned
+          - generic [ref=e35]: (0)
+        - generic [ref=e36]:
+          - generic [ref=e37]:
+            - generic [ref=e38]: in progress
+            - generic [ref=e39]: (1)
+          - button "Build login page dev-1" [ref=e41] [cursor=pointer]:
+            - paragraph [ref=e42]: Build login page
+            - generic [ref=e44]: dev-1
+        - generic [ref=e46]:
+          - generic [ref=e47]: blocked
+          - generic [ref=e48]: (0)
+        - generic [ref=e50]:
+          - generic [ref=e51]: review request
+          - generic [ref=e52]: (0)
+        - generic [ref=e54]:
+          - generic [ref=e55]: done
+          - generic [ref=e56]: (0)
+  - alert [ref=e57]

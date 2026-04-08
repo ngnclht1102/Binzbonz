@@ -1,0 +1,58 @@
+- generic [ref=e1]:
+  - complementary [ref=e2]:
+    - link "Binzbonz" [ref=e3] [cursor=pointer]:
+      - /url: /projects
+    - navigation [ref=e4]:
+      - link "Projects" [ref=e5] [cursor=pointer]:
+        - /url: /projects
+  - main [ref=e6]:
+    - generic [ref=e7]:
+      - generic [ref=e8]:
+        - generic [ref=e9]:
+          - heading "Board Test" [level=1] [ref=e10]
+          - generic [ref=e11]: active
+        - paragraph [ref=e12]: Testing board view
+      - generic [ref=e13]:
+        - link "Board" [ref=e14] [cursor=pointer]:
+          - /url: /projects/22d0602c-1741-4e2c-a491-5a936e7c6b20
+        - link "Tree" [ref=e15] [cursor=pointer]:
+          - /url: /projects/22d0602c-1741-4e2c-a491-5a936e7c6b20/tree
+        - link "Agents" [ref=e16] [cursor=pointer]:
+          - /url: /projects/22d0602c-1741-4e2c-a491-5a936e7c6b20/agents
+      - generic [ref=e18]:
+        - button "▾ mvp MVP 1" [ref=e19] [cursor=pointer]:
+          - generic [ref=e20]: ▾
+          - generic [ref=e21]: mvp
+          - generic [ref=e22]: MVP 1
+        - generic [ref=e23]:
+          - button "▾ sprint Sprint 1" [ref=e24] [cursor=pointer]:
+            - generic [ref=e25]: ▾
+            - generic [ref=e26]: sprint
+            - generic [ref=e27]: Sprint 1
+          - generic [ref=e28]:
+            - button "▾ epic Core Setup" [ref=e34] [cursor=pointer]:
+              - generic [ref=e30]: ▾
+              - generic [ref=e31]: epic
+              - generic [ref=e32]: Core Setup
+            - generic [ref=e35]:
+              - button "▾ feature Auth Flow" [active] [ref=e40] [cursor=pointer]:
+                - generic [ref=e37]: ▾
+                - generic [ref=e38]: feature
+                - generic [ref=e39]: Auth Flow
+              - button "▸ task Setup database" [ref=e42] [cursor=pointer]:
+                - generic [ref=e43]: ▸
+                - generic [ref=e44]: task
+                - generic [ref=e45]: Setup database
+              - button "· task Build login page" [ref=e47] [cursor=pointer]:
+                - generic [ref=e48]: ·
+                - generic [ref=e49]: task
+                - generic [ref=e50]: Build login page
+              - button "· task Write tests" [ref=e52] [cursor=pointer]:
+                - generic [ref=e53]: ·
+                - generic [ref=e54]: task
+                - generic [ref=e55]: Write tests
+              - button "· task Add migrations" [ref=e57] [cursor=pointer]:
+                - generic [ref=e58]: ·
+                - generic [ref=e59]: task
+                - generic [ref=e60]: Add migrations
+  - alert [ref=e33]

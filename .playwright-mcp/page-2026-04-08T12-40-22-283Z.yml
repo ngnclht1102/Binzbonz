@@ -1,0 +1,23 @@
+- generic [active] [ref=e1]:
+  - complementary [ref=e2]:
+    - link "Binzbonz" [ref=e3] [cursor=pointer]:
+      - /url: /projects
+    - navigation [ref=e4]:
+      - link "Projects" [ref=e5] [cursor=pointer]:
+        - /url: /projects
+  - main [ref=e6]:
+    - generic [ref=e25]:
+      - generic [ref=e26]:
+        - generic [ref=e27]:
+          - heading "Test Orchestration Project" [level=1] [ref=e28]
+          - generic [ref=e29]: analysing
+        - paragraph [ref=e30]: A platform for managing AI agents
+      - generic [ref=e31]:
+        - link "Board" [ref=e32] [cursor=pointer]:
+          - /url: /projects/98992fc0-ab83-4e28-b76e-dd75663d220d
+        - link "Tree" [ref=e33] [cursor=pointer]:
+          - /url: /projects/98992fc0-ab83-4e28-b76e-dd75663d220d/tree
+        - link "Agents" [ref=e34] [cursor=pointer]:
+          - /url: /projects/98992fc0-ab83-4e28-b76e-dd75663d220d/agents
+      - generic [ref=e35]: Board view — coming in Task 19
+  - alert [ref=e12]

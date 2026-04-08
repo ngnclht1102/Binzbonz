@@ -1,0 +1,23 @@
+- generic [active] [ref=e1]:
+  - complementary [ref=e2]:
+    - link "Binzbonz" [ref=e3] [cursor=pointer]:
+      - /url: /projects
+    - navigation [ref=e4]:
+      - link "Projects" [ref=e5] [cursor=pointer]:
+        - /url: /projects
+  - main [ref=e6]:
+    - generic [ref=e20]:
+      - generic [ref=e21]:
+        - generic [ref=e22]:
+          - heading "E2E Todo App" [level=1] [ref=e23]
+          - generic [ref=e24]: analysing
+        - paragraph [ref=e25]: Build a todo application with CRUD operations
+      - generic [ref=e26]:
+        - link "Board" [ref=e27] [cursor=pointer]:
+          - /url: /projects/28066a88-851e-405c-86e8-4acdd31e6cbc
+        - link "Tree" [ref=e28] [cursor=pointer]:
+          - /url: /projects/28066a88-851e-405c-86e8-4acdd31e6cbc/tree
+        - link "Agents" [ref=e29] [cursor=pointer]:
+          - /url: /projects/28066a88-851e-405c-86e8-4acdd31e6cbc/agents
+      - paragraph [ref=e30]: No tasks yet. Create hierarchy and tasks via the API.
+  - alert [ref=e19]

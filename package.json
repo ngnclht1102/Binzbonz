@@ -1,0 +1,16 @@
+{
+  "name": "binzbonz",
+  "private": true,
+  "scripts": {
+    "dev": "turbo dev",
+    "build": "turbo build",
+    "lint": "turbo lint"
+  },
+  "devDependencies": {
+    "turbo": "^2.5.0"
+  },
+  "packageManager": "pnpm@10.30.1",
+  "pnpm": {
+    "onlyBuiltDependencies": ["@nestjs/core", "esbuild", "@embedded-postgres/darwin-arm64"]
+  }
+}

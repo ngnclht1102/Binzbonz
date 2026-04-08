@@ -1,0 +1,49 @@
+- generic [ref=e1]:
+  - complementary [ref=e2]:
+    - link "Binzbonz" [ref=e3] [cursor=pointer]:
+      - /url: /projects
+    - navigation [ref=e4]:
+      - link "Projects" [ref=e5] [cursor=pointer]:
+        - /url: /projects
+  - main [ref=e6]:
+    - generic [ref=e7]:
+      - generic [ref=e21]:
+        - generic [ref=e22]:
+          - heading "Ticket Type Test" [level=1] [ref=e23]
+          - combobox [ref=e24] [cursor=pointer]:
+            - option "analysing"
+            - option "paused"
+            - option "active" [selected]
+            - option "completed"
+        - paragraph [ref=e25]: Test hierarchy creation
+      - generic [ref=e26]:
+        - generic [ref=e27]:
+          - link "Board" [ref=e28] [cursor=pointer]:
+            - /url: /projects/7a239ce3-a3f0-487c-84bb-eb1276a03b20
+          - link "Tree" [ref=e29] [cursor=pointer]:
+            - /url: /projects/7a239ce3-a3f0-487c-84bb-eb1276a03b20/tree
+          - link "Agents" [ref=e30] [cursor=pointer]:
+            - /url: /projects/7a239ce3-a3f0-487c-84bb-eb1276a03b20/agents
+        - button "+ New Task" [ref=e31] [cursor=pointer]
+      - paragraph [ref=e32]: No tasks yet. Click "+ New Task" to create one.
+      - generic [ref=e34]:
+        - heading "New Ticket" [level=3] [ref=e35]
+        - generic [ref=e36]:
+          - generic [ref=e37]:
+            - generic [ref=e38]: Type
+            - combobox [ref=e39]:
+              - option "MVP"
+              - option "Sprint"
+              - option "Epic"
+              - option "Feature"
+              - option "Task" [selected]
+              - option "Subtask"
+          - generic [ref=e40]:
+            - generic [ref=e41]: Parent Feature
+            - paragraph [ref=e42]: No features yet — one will be auto-created
+          - textbox "Title" [active] [ref=e43]
+          - textbox "Description (optional)" [ref=e44]
+          - generic [ref=e45]:
+            - button "Cancel" [ref=e46] [cursor=pointer]
+            - button "Create" [ref=e47] [cursor=pointer]
+  - alert [ref=e20]
