@@ -7,8 +7,10 @@ import {
   updateWakeEvent,
   updateActor,
   postComment,
+  getAgentProjectSession,
+  upsertAgentProjectSession,
 } from './api-client.js';
-import { buildPrompt } from './prompt-builder.js';
+import { buildPrompt, type SessionState } from './prompt-builder.js';
 import { spawnClaude } from './claude-spawner.js';
 import { log, warn, error as logError } from './logger.js';
 
@@ -65,10 +67,19 @@ async function processEvent(eventId: string): Promise<void> {
 
     await updateActor(actor.id, { status: 'working' });
 
-    let { prompt, isNewSession } = await buildPrompt(event, actor);
+    // Per-project session lookup. Defaults to a clean SessionState if no row
+    // exists yet — the upsert after the spawn will create the row.
+    const sessionRow = await getAgentProjectSession(actor.id, event.project_id);
+    const sessionState: SessionState = {
+      session_id: sessionRow?.session_id ?? null,
+      last_token_count: sessionRow?.last_token_count ?? 0,
+      last_active_at: sessionRow?.last_active_at ?? null,
+    };
+
+    let { prompt, isNewSession } = await buildPrompt(event, actor, sessionState);
     const taskId = event.task_id;
 
-    log("runner",` >>> Processing: ${actor.name} (${event.triggered_by})${taskId ? ` on task ${taskId.slice(0, 8)}` : ''} [${isNewSession ? 'NEW session' : 'RESUME ' + actor.session_id?.slice(0, 8)}] prompt=${prompt.length} chars`);
+    log("runner",` >>> Processing: ${actor.name} (${event.triggered_by})${taskId ? ` on task ${taskId.slice(0, 8)}` : ''} [${isNewSession ? 'NEW session' : 'RESUME ' + sessionState.session_id?.slice(0, 8)}] prompt=${prompt.length} chars`);
 
     // Post "working" indicator immediately so UI shows activity
     if (taskId) {
@@ -91,7 +102,7 @@ async function processEvent(eventId: string): Promise<void> {
     const onChunk = taskId ? (text: string) => { progressBuffer += text; } : undefined;
 
     // Run Claude
-    let result = await spawnClaude(actor, prompt, project.repo_path ?? undefined, onChunk);
+    let result = await spawnClaude(sessionState.session_id, prompt, project.repo_path ?? undefined, onChunk);
 
     // Stop progress timer
     if (progressTimer) clearInterval(progressTimer);
@@ -106,21 +117,21 @@ async function processEvent(eventId: string): Promise<void> {
           'block',
         ).catch(() => {});
       }
-      // Keep existing session_id — it's still valid, just can't use it right now
+      // Keep the per-project session_id — it's still valid, just can't use it right now
       await updateActor(actor.id, { status: 'idle' });
       await updateWakeEvent(eventId, 'failed');
       log("runner", ` <<< Stopped (fatal): ${actor.name}`);
       return;
     }
 
-    // If spawner fell back to a new session, rebuild prompt with skill file and retry
+    // If spawner fell back to a new session, clear our state and rebuild prompt with skill file
     if (result.isNewSession && !isNewSession) {
       log("runner",` Session fallback detected — rebuilding prompt with skill file`);
-      actor.session_id = null;
-      const rebuilt = await buildPrompt(event, actor);
+      sessionState.session_id = null;
+      const rebuilt = await buildPrompt(event, actor, sessionState);
       prompt = rebuilt.prompt;
       isNewSession = true;
-      result = await spawnClaude({ ...actor, session_id: null }, prompt, project.repo_path ?? undefined, onChunk);
+      result = await spawnClaude(null, prompt, project.repo_path ?? undefined, onChunk);
 
       // Check fatal again after retry
       if (result.fatalError) {
@@ -149,12 +160,16 @@ async function processEvent(eventId: string): Promise<void> {
 
     log("runner",` Agent ${actor.name} output: ${output.length} chars`);
 
-    // Update actor — save new session_id if one was created
-    await updateActor(actor.id, {
-      session_id: result.sessionId ?? undefined,
+    // Write back to the per-project session row — bumps last_active_at and stores
+    // the session_id (whether reused or freshly created) plus current token count.
+    await upsertAgentProjectSession(actor.id, event.project_id, {
+      session_id: result.sessionId ?? sessionState.session_id ?? null,
       last_token_count: result.inputTokens,
-      status: 'idle',
+    }).catch((err) => {
+      logError("runner", `Failed to upsert session row: ${err instanceof Error ? err.message : String(err)}`);
     });
+
+    await updateActor(actor.id, { status: 'idle' });
 
     await updateWakeEvent(eventId, 'done');
     log("runner",` <<< Done: ${actor.name}`);

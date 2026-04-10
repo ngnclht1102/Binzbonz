@@ -1,5 +1,4 @@
 import { execa } from 'execa';
-import type { Actor } from './types.js';
 import { log, error as logError } from './logger.js';
 
 export interface SpawnResult {
@@ -108,7 +107,7 @@ async function runClaude(
   return {
     sessionId, inputTokens, textOutput: fullText,
     rawStdout, rawStderr, isNewSession: false, fatalError: null,
-    errors, exitCode: result.exitCode,
+    errors, exitCode: result.exitCode ?? null,
   };
 }
 
@@ -181,16 +180,16 @@ function buildFatalResult(message: string, sessionId: string | null): SpawnResul
 }
 
 export async function spawnClaude(
-  actor: Actor,
+  existingSessionId: string | null,
   prompt: string,
   cwd: string | undefined,
   onTextChunk?: (text: string) => void,
 ): Promise<SpawnResult> {
 
   // === RESUME PATH ===
-  if (actor.session_id) {
+  if (existingSessionId) {
     const resumeArgs = [
-      '--resume', actor.session_id,
+      '--resume', existingSessionId,
       '--dangerously-skip-permissions',
       '--verbose',
       '--output-format', 'stream-json',
@@ -198,7 +197,7 @@ export async function spawnClaude(
     ];
 
     for (let attempt = 1; attempt <= 3; attempt++) {
-      log("spawner", `RESUME attempt ${attempt}/3: ${actor.session_id.slice(0, 8)} (cwd: ${cwd ?? 'inherited'})`);
+      log("spawner", `RESUME attempt ${attempt}/3: ${existingSessionId.slice(0, 8)} (cwd: ${cwd ?? 'inherited'})`);
       const result = await runClaude(resumeArgs, cwd, onTextChunk);
 
       // Log raw result for debugging
@@ -210,12 +209,12 @@ export async function spawnClaude(
       if (errorType === 'quota') {
         const msg = result.errors.join('; ') || result.rawStderr.slice(0, 300) || 'Unknown quota error';
         logError("spawner", `Quota/rate limit hit: ${msg}`);
-        return buildFatalResult(msg, actor.session_id);
+        return buildFatalResult(msg, existingSessionId);
       }
 
       // SESSION GONE: skip retries, fall through to new session
       if (errorType === 'session_gone') {
-        log("spawner", `Session ${actor.session_id.slice(0, 8)} not found — will init new session`);
+        log("spawner", `Session ${existingSessionId.slice(0, 8)} not found — will init new session`);
         break;
       }
 

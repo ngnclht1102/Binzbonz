@@ -1,6 +1,6 @@
 import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { In, Repository } from 'typeorm';
 import { Actor } from '../actors/actor.entity.js';
 
 const SEED_ACTORS = [
@@ -9,10 +9,13 @@ const SEED_ACTORS = [
   { name: 'dev-2', type: 'agent', role: 'developer', status: 'idle' },
   { name: 'dev-3', type: 'agent', role: 'developer', status: 'idle' },
   { name: 'dev-4', type: 'agent', role: 'developer', status: 'idle' },
-  { name: 'dev-5', type: 'agent', role: 'developer', status: 'idle' },
-  { name: 'dev-6', type: 'agent', role: 'developer', status: 'idle' },
   { name: 'brian', type: 'human', role: null, status: 'idle' },
 ];
+
+// One-shot cleanup: agents that used to be seeded but are no longer wanted.
+// Removing them here cascades to their agent_project_session, comment, and
+// wake_event rows; tasks assigned/created by them survive with NULL refs.
+const REMOVED_SEED_ACTORS = ['dev-5', 'dev-6'];
 
 @Injectable()
 export class SeedService implements OnModuleInit {
@@ -38,6 +41,15 @@ export class SeedService implements OnModuleInit {
       this.logger.log(`Seeded ${created} actors`);
     } else {
       this.logger.log('All seed actors already exist');
+    }
+
+    // Drop any actors we no longer want seeded (idempotent — no-op once done).
+    const stale = await this.actorRepo.find({
+      where: { name: In(REMOVED_SEED_ACTORS) },
+    });
+    if (stale.length > 0) {
+      await this.actorRepo.remove(stale);
+      this.logger.log(`Removed stale seed actors: ${stale.map((a) => a.name).join(', ')}`);
     }
   }
 }

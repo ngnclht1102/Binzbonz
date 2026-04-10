@@ -273,6 +273,7 @@ export default function TreeViewPage() {
     { label: "Board", href: `/projects/${id}` },
     { label: "Tree", href: `/projects/${id}/tree` },
     { label: "Agents", href: `/projects/${id}/agents` },
+    { label: "Files", href: `/projects/${id}/files` },
   ];
 
   return (

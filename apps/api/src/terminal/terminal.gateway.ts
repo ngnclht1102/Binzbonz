@@ -12,6 +12,7 @@ import { execSync } from 'child_process';
 import * as pty from '@homebridge/node-pty-prebuilt-multiarch';
 import { Actor } from '../actors/actor.entity.js';
 import { Project } from '../projects/project.entity.js';
+import { AgentProjectSessionsService } from '../agent-project-sessions/agent-project-sessions.service.js';
 
 interface ActiveSession {
   proc: pty.IPty;
@@ -31,6 +32,7 @@ export class TerminalGateway implements OnGatewayConnection, OnGatewayDisconnect
     private readonly actorRepo: Repository<Actor>,
     @InjectRepository(Project)
     private readonly projectRepo: Repository<Project>,
+    private readonly sessions_svc: AgentProjectSessionsService,
   ) {}
 
   async handleConnection(client: any): Promise<void> {
@@ -93,12 +95,16 @@ export class TerminalGateway implements OnGatewayConnection, OnGatewayDisconnect
       this.logger.warn('Could not resolve claude path');
     }
 
-    // Resume the agent's actual session if it has one
+    // Look up the per-project session for this (agent, project) pair
+    const sessionRow = await this.sessions_svc.findOne(agentId, projectId);
+    const resumeSessionId = sessionRow?.session_id ?? null;
+
+    // Resume the per-project session if one exists
     const args = ['--dangerously-skip-permissions'];
     let sessionLabel = 'new session';
-    if (actor.session_id) {
-      args.push('--resume', actor.session_id);
-      sessionLabel = `resuming session ${actor.session_id.slice(0, 8)}`;
+    if (resumeSessionId) {
+      args.push('--resume', resumeSessionId);
+      sessionLabel = `resuming session ${resumeSessionId.slice(0, 8)}`;
     }
 
     this.logger.log(`Starting terminal for ${actor.name} in ${cwd} (${sessionLabel})`);

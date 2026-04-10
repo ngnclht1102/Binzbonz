@@ -1,4 +1,4 @@
-import type { Actor, WakeEvent, Comment } from './types.js';
+import type { Actor, AgentProjectSession, WakeEvent, Comment } from './types.js';
 import { log, error as logError, debug } from './logger.js';
 
 const API_URL = process.env.API_URL ?? 'http://localhost:3001';
@@ -15,7 +15,12 @@ async function request<T>(path: string, options?: RequestInit): Promise<T> {
     throw new Error(`API ${res.status}: ${body}`);
   }
   debug('api-client', `${method} ${path} -> ${res.status}`);
-  return res.json() as Promise<T>;
+  // Read as text first so we can handle 204 / empty bodies (NestJS returns
+  // an empty body when a controller returns `null`, which would otherwise
+  // crash res.json() with "Unexpected end of JSON input").
+  const text = await res.text();
+  if (!text) return null as unknown as T;
+  return JSON.parse(text) as T;
 }
 
 export const getPendingEvents = () =>
@@ -61,3 +66,26 @@ export const getChangedMemoryFiles = (projectId: string, since: string) =>
   request<{ file_path: string }[]>(
     `/projects/${projectId}/memory-files/changed?since=${encodeURIComponent(since)}`,
   );
+
+/**
+ * Look up the per-project session row for (agent, project). Returns null if
+ * the row doesn't exist yet.
+ */
+export const getAgentProjectSession = (agentId: string, projectId: string) =>
+  request<AgentProjectSession | null>(
+    `/agent-project-sessions?agent_id=${agentId}&project_id=${projectId}`,
+  );
+
+/**
+ * Upsert the per-project session row. The runner calls this after every spawn
+ * to write back the new session_id and token count and bump last_active_at.
+ */
+export const upsertAgentProjectSession = (
+  agentId: string,
+  projectId: string,
+  data: { session_id?: string | null; last_token_count?: number },
+) =>
+  request<AgentProjectSession>(`/agent-project-sessions`, {
+    method: 'PATCH',
+    body: JSON.stringify({ agent_id: agentId, project_id: projectId, ...data }),
+  });

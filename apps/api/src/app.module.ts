@@ -2,6 +2,7 @@ import { Module } from '@nestjs/common';
 import { AppController } from './app.controller.js';
 import { DatabaseModule } from './database/database.module.js';
 import { ActorsModule } from './actors/actors.module.js';
+import { AgentProjectSessionsModule } from './agent-project-sessions/agent-project-sessions.module.js';
 import { ProjectsModule } from './projects/projects.module.js';
 import { HierarchyModule } from './hierarchy/hierarchy.module.js';
 import { TasksModule } from './tasks/tasks.module.js';
@@ -17,6 +18,7 @@ import { FilesystemModule } from './filesystem/filesystem.module.js';
   imports: [
     DatabaseModule,
     ActorsModule,
+    AgentProjectSessionsModule,
     ProjectsModule,
     HierarchyModule,
     TasksModule,

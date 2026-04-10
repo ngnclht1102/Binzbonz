@@ -3,10 +3,17 @@ export interface Actor {
   name: string;
   type: string;
   role: string | null;
+  status: string;
+}
+
+/** Per-project session row, returned from the API. */
+export interface AgentProjectSession {
+  id: string;
+  agent_id: string;
+  project_id: string;
   session_id: string | null;
   last_token_count: number;
   last_active_at: string | null;
-  status: string;
 }
 
 export interface Project {

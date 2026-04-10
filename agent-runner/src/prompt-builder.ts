@@ -28,14 +28,25 @@ function loadSkillFile(role: string | null): string {
   }
 }
 
+/** Per-project session state, passed in by the runner. */
+export interface SessionState {
+  session_id: string | null;
+  last_token_count: number;
+  last_active_at: string | null;
+}
+
 /**
  * Build the context that's common to both new and resumed sessions:
  * project info, task info, recent comments, memory changes, trigger instructions.
  */
-async function buildContext(event: WakeEvent, actor: Actor): Promise<string> {
+async function buildContext(
+  event: WakeEvent,
+  actor: Actor,
+  sessionState: SessionState,
+): Promise<string> {
   const parts: string[] = [];
 
-  if (actor.last_token_count > 900_000) {
+  if (sessionState.last_token_count > 900_000) {
     parts.push(
       '[CONTEXT WARNING: You are at 900k+ tokens. After processing this message, run /compact to reduce context size.]',
     );
@@ -76,11 +87,11 @@ async function buildContext(event: WakeEvent, actor: Actor): Promise<string> {
   }
 
   // Memory changes (only for resumed sessions)
-  if (actor.last_active_at) {
+  if (sessionState.last_active_at) {
     try {
       const changedFiles = await getChangedMemoryFiles(
         event.project_id,
-        actor.last_active_at,
+        sessionState.last_active_at,
       );
       if (changedFiles.length > 0) {
         parts.push('');
@@ -100,8 +111,6 @@ async function buildContext(event: WakeEvent, actor: Actor): Promise<string> {
     parts.push('You have been assigned to this task. Read the task description and start working on it. Post your plan and progress as comments via the API.');
   } else if (event.triggered_by === 'mention') {
     parts.push('You were @mentioned in a comment. Read the comments above and respond or take action accordingly via the API.');
-  } else if (event.triggered_by === 'heartbeat') {
-    parts.push('This is a heartbeat check. Review all active tasks, check for stuck agents, and coordinate as needed.');
   } else {
     parts.push('Check your current task and continue working.');
   }
@@ -112,16 +121,17 @@ async function buildContext(event: WakeEvent, actor: Actor): Promise<string> {
 export async function buildPrompt(
   event: WakeEvent,
   actor: Actor,
+  sessionState: SessionState,
 ): Promise<{ prompt: string; isNewSession: boolean }> {
   // Token-based compaction
-  if (actor.last_token_count > 960_000) {
+  if (sessionState.last_token_count > 960_000) {
     return { prompt: '/compact', isNewSession: false };
   }
 
-  const context = await buildContext(event, actor);
+  const context = await buildContext(event, actor, sessionState);
 
   // NEW SESSION: no session_id → load skill file + full identity + context
-  if (!actor.session_id) {
+  if (!sessionState.session_id) {
     const sections: string[] = [];
 
     const skill = loadSkillFile(actor.role);

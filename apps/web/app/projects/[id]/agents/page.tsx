@@ -51,6 +51,7 @@ export default function AgentPoolPage() {
     { label: "Board", href: `/projects/${id}` },
     { label: "Tree", href: `/projects/${id}/tree` },
     { label: "Agents", href: `/projects/${id}/agents` },
+    { label: "Files", href: `/projects/${id}/files` },
   ];
 
   return (
@@ -138,11 +139,6 @@ export default function AgentPoolPage() {
                 </span>
                 <span className="text-xs text-gray-500">{agent.status}</span>
               </div>
-              {agent.last_active_at && (
-                <p className="text-xs text-gray-500 mt-1">
-                  Last active: {new Date(agent.last_active_at).toLocaleString()}
-                </p>
-              )}
             </Link>
           ))}
         </div>

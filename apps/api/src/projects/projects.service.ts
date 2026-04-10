@@ -1,10 +1,12 @@
 import {
   Injectable,
+  Logger,
   NotFoundException,
   BadRequestException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
+import { rmSync, existsSync } from 'fs';
 import { Project } from './project.entity.js';
 import { CreateProjectDto } from './dto/create-project.dto.js';
 import { UpdateProjectDto } from './dto/update-project.dto.js';
@@ -19,6 +21,8 @@ const VALID_TRANSITIONS: Record<string, string[]> = {
 
 @Injectable()
 export class ProjectsService {
+  private readonly logger = new Logger(ProjectsService.name);
+
   constructor(
     @InjectRepository(Project)
     private readonly repo: Repository<Project>,
@@ -69,9 +73,31 @@ export class ProjectsService {
     return this.repo.save(project);
   }
 
-  async remove(id: string) {
+  async remove(id: string, deleteFiles = false) {
     const project = await this.findOne(id);
+    const repoPath = project.repo_path;
+
+    // Delete DB row first — this cascades to mvps/sprints/epics/features/tasks/
+    // comments/wake_events/memory_files via ON DELETE CASCADE.
     await this.repo.remove(project);
-    return { deleted: true };
+
+    let filesDeleted = false;
+    if (deleteFiles && repoPath && existsSync(repoPath)) {
+      try {
+        rmSync(repoPath, { recursive: true, force: true });
+        this.logger.log(`Deleted workspace at ${repoPath}`);
+        filesDeleted = true;
+      } catch (err) {
+        // DB delete already succeeded — surface the disk failure but don't undo
+        this.logger.error(
+          `Failed to delete workspace at ${repoPath}: ${(err as Error).message}`,
+        );
+        throw new BadRequestException(
+          `Project deleted from database, but failed to delete workspace files: ${(err as Error).message}`,
+        );
+      }
+    }
+
+    return { deleted: true, files_deleted: filesDeleted };
   }
 }

@@ -2,7 +2,7 @@
 
 ## Agent Skills
 - If you are a **developer** agent, read `skills/developer.md` for your workflow and guidelines.
-- If you are **CTBACEO**, read `skills/ctbaceo.md` for your responsibilities and heartbeat behaviour.
+- If you are **CTBACEO**, read `skills/ctbaceo.md` for your responsibilities.
 
 ## Project Memory
 - Shared project context lives in the `memory/` directory (markdown files, git-tracked).

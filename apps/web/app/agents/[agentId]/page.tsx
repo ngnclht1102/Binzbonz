@@ -1,11 +1,15 @@
 "use client";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import dynamic from "next/dynamic";
 import {
   getActor,
   getWakeEvents,
+  getAgentProjectSessions,
+  getProjects,
   type Actor,
+  type AgentProjectSession,
+  type Project,
   type WakeEvent,
 } from "@/lib/api";
 
@@ -31,27 +35,55 @@ export default function GlobalAgentDetailPage() {
   const agentId = params.agentId as string;
   const [agent, setAgent] = useState<Actor | null>(null);
   const [events, setEvents] = useState<WakeEvent[]>([]);
+  const [sessions, setSessions] = useState<AgentProjectSession[]>([]);
+  const [allProjects, setAllProjects] = useState<Project[]>([]);
   const [loading, setLoading] = useState(true);
   const [showTerminal, setShowTerminal] = useState(false);
-  // Use the most recent project from wake events for terminal CWD
   const [terminalProjectId, setTerminalProjectId] = useState<string | null>(null);
 
   const fetchData = async () => {
     try {
-      const [a, e] = await Promise.all([
+      const [a, e, s, p] = await Promise.all([
         getActor(agentId),
         getWakeEvents({ agent_id: agentId }),
+        getAgentProjectSessions(agentId).catch(() => [] as AgentProjectSession[]),
+        getProjects().catch(() => [] as Project[]),
       ]);
       setAgent(a);
       setEvents(e);
-      // Find the most recent project this agent worked on
-      if (e.length > 0) {
-        const sorted = [...e].sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
-        setTerminalProjectId(sorted[0].project_id);
-      }
+      setSessions(s);
+      setAllProjects(p);
     } catch { /* ignore */ }
     setLoading(false);
   };
+
+  // Default the terminal target to the most recently active project (or any project if none)
+  useEffect(() => {
+    if (terminalProjectId) return;
+    if (sessions.length > 0) {
+      // sessions are already ordered by last_active_at DESC server-side
+      setTerminalProjectId(sessions[0].project_id);
+    } else if (allProjects.length > 0) {
+      setTerminalProjectId(allProjects[0].id);
+    }
+  }, [sessions, allProjects, terminalProjectId]);
+
+  // Project rows for the Project Sessions table — every project, with session info if available
+  const projectRows = useMemo(() => {
+    const sessionByProject = new Map(sessions.map((s) => [s.project_id, s]));
+    return allProjects
+      .map((proj) => ({
+        project: proj,
+        session: sessionByProject.get(proj.id) ?? null,
+      }))
+      .sort((a, b) => {
+        // Active sessions first (sorted by last_active_at DESC), then no-session projects by name
+        const aActive = a.session?.last_active_at ? new Date(a.session.last_active_at).getTime() : 0;
+        const bActive = b.session?.last_active_at ? new Date(b.session.last_active_at).getTime() : 0;
+        if (aActive !== bActive) return bActive - aActive;
+        return a.project.name.localeCompare(b.project.name);
+      });
+  }, [allProjects, sessions]);
 
   useEffect(() => {
     fetchData();
@@ -94,33 +126,106 @@ export default function GlobalAgentDetailPage() {
             </span>
             <span className="text-sm text-gray-400">{agent.status}</span>
           </div>
-          {terminalProjectId && (
+          {/* Terminal launcher: project picker + open button */}
+          <div className="flex items-center gap-2">
+            <select
+              value={terminalProjectId ?? ""}
+              onChange={(e) => setTerminalProjectId(e.target.value || null)}
+              className="px-2 py-1.5 bg-gray-800 border border-gray-700 rounded text-sm focus:outline-none focus:border-blue-500 max-w-[200px]"
+              title="Pick project for terminal session"
+            >
+              {projectRows.length === 0 && <option value="">No projects</option>}
+              {projectRows.map(({ project, session }) => (
+                <option key={project.id} value={project.id}>
+                  {project.name} {session?.session_id ? "" : "(new)"}
+                </option>
+              ))}
+            </select>
             <button
+              disabled={!terminalProjectId}
               onClick={() => setShowTerminal(true)}
-              className="px-4 py-2 bg-green-600 hover:bg-green-500 rounded text-sm font-medium transition-colors flex items-center gap-2"
+              className="px-4 py-2 bg-green-600 hover:bg-green-500 disabled:bg-gray-700 disabled:text-gray-500 rounded text-sm font-medium transition-colors flex items-center gap-2"
             >
               <span>{'>'}_</span> Terminal
             </button>
-          )}
+          </div>
         </div>
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 text-sm">
+        <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 text-sm">
           <div>
             <p className="text-gray-500 text-xs uppercase">Type</p>
             <p>{agent.type}</p>
           </div>
           <div>
-            <p className="text-gray-500 text-xs uppercase">Last Active</p>
-            <p>{agent.last_active_at ? new Date(agent.last_active_at).toLocaleString() : "Never"}</p>
+            <p className="text-gray-500 text-xs uppercase">Created</p>
+            <p>{new Date(agent.created_at).toLocaleDateString()}</p>
           </div>
           <div>
-            <p className="text-gray-500 text-xs uppercase">Session</p>
-            <p className="font-mono text-xs">{agent.session_id ? agent.session_id.slice(0, 12) + "..." : "None"}</p>
-          </div>
-          <div>
-            <p className="text-gray-500 text-xs uppercase">Tokens</p>
-            <p>{agent.last_token_count?.toLocaleString() ?? 0}</p>
+            <p className="text-gray-500 text-xs uppercase">Active Project Sessions</p>
+            <p>{sessions.filter((s) => s.session_id).length} / {allProjects.length}</p>
           </div>
         </div>
+      </div>
+
+      {/* Project Sessions table */}
+      <div className="mb-6">
+        <h2 className="text-sm font-semibold text-gray-400 uppercase mb-2">
+          Project Sessions
+        </h2>
+        {projectRows.length === 0 ? (
+          <p className="text-gray-500 text-sm">No projects yet.</p>
+        ) : (
+          <div className="bg-gray-900 border border-gray-800 rounded overflow-hidden">
+            <table className="w-full text-sm">
+              <thead className="bg-gray-800/50">
+                <tr className="text-left text-xs text-gray-500 uppercase">
+                  <th className="px-3 py-2 font-medium">Project</th>
+                  <th className="px-3 py-2 font-medium">Session</th>
+                  <th className="px-3 py-2 font-medium">Tokens</th>
+                  <th className="px-3 py-2 font-medium">Last Active</th>
+                  <th className="px-3 py-2 font-medium"></th>
+                </tr>
+              </thead>
+              <tbody>
+                {projectRows.map(({ project, session }) => {
+                  const hasSession = !!session?.session_id;
+                  return (
+                    <tr
+                      key={project.id}
+                      className={`border-t border-gray-800 ${
+                        hasSession ? "" : "text-gray-600"
+                      }`}
+                    >
+                      <td className="px-3 py-2">{project.name}</td>
+                      <td className="px-3 py-2 font-mono text-xs">
+                        {session?.session_id ? session.session_id.slice(0, 12) + "..." : "—"}
+                      </td>
+                      <td className="px-3 py-2">
+                        {session?.last_token_count?.toLocaleString() ?? "—"}
+                      </td>
+                      <td className="px-3 py-2 text-xs">
+                        {session?.last_active_at
+                          ? new Date(session.last_active_at).toLocaleString()
+                          : "never"}
+                      </td>
+                      <td className="px-3 py-2 text-right">
+                        <button
+                          onClick={() => {
+                            setTerminalProjectId(project.id);
+                            setShowTerminal(true);
+                          }}
+                          className="text-xs px-2 py-0.5 rounded bg-gray-800 hover:bg-gray-700 transition-colors"
+                          title="Open terminal in this project"
+                        >
+                          terminal
+                        </button>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        )}
       </div>
 
       {/* In Progress */}

@@ -30,7 +30,7 @@ export class WakeEvent {
   project_id!: string;
 
   @Column({ type: 'text' })
-  triggered_by!: string; // mention | heartbeat | project_created | project_resumed
+  triggered_by!: string; // mention | assignment | project_created | project_resumed
 
   @ManyToOne(() => Comment, { nullable: true, onDelete: 'SET NULL' })
   @JoinColumn({ name: 'comment_id' })

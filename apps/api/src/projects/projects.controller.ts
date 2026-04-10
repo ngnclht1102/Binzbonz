@@ -6,6 +6,7 @@ import {
   Delete,
   Param,
   Body,
+  Query,
 } from '@nestjs/common';
 import { ProjectsService } from './projects.service.js';
 import { CreateProjectDto } from './dto/create-project.dto.js';
@@ -36,7 +37,10 @@ export class ProjectsController {
   }
 
   @Delete(':id')
-  remove(@Param('id') id: string) {
-    return this.service.remove(id);
+  remove(
+    @Param('id') id: string,
+    @Query('delete_files') deleteFiles?: string,
+  ) {
+    return this.service.remove(id, deleteFiles === 'true');
   }
 }

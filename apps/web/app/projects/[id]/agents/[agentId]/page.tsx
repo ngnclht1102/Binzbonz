@@ -5,7 +5,9 @@ import dynamic from "next/dynamic";
 import {
   getActor,
   getWakeEvents,
+  getAgentProjectSession,
   type Actor,
+  type AgentProjectSession,
   type WakeEvent,
 } from "@/lib/api";
 
@@ -32,17 +34,20 @@ export default function AgentDetailPage() {
   const agentId = params.agentId as string;
   const [agent, setAgent] = useState<Actor | null>(null);
   const [events, setEvents] = useState<WakeEvent[]>([]);
+  const [session, setSession] = useState<AgentProjectSession | null>(null);
   const [loading, setLoading] = useState(true);
   const [showTerminal, setShowTerminal] = useState(false);
 
   const fetchData = async () => {
     try {
-      const [a, e] = await Promise.all([
+      const [a, e, s] = await Promise.all([
         getActor(agentId),
         getWakeEvents({ agent_id: agentId }),
+        getAgentProjectSession(agentId, projectId).catch(() => null),
       ]);
       setAgent(a);
       setEvents(e);
+      setSession(s);
     } catch {
       // ignore
     }
@@ -102,16 +107,16 @@ export default function AgentDetailPage() {
             <p>{agent.type}</p>
           </div>
           <div>
-            <p className="text-gray-500 text-xs uppercase">Last Active</p>
-            <p>{agent.last_active_at ? new Date(agent.last_active_at).toLocaleString() : "Never"}</p>
+            <p className="text-gray-500 text-xs uppercase">Last Active (this project)</p>
+            <p>{session?.last_active_at ? new Date(session.last_active_at).toLocaleString() : "Never"}</p>
           </div>
           <div>
-            <p className="text-gray-500 text-xs uppercase">Session</p>
-            <p className="font-mono text-xs">{agent.session_id ? agent.session_id.slice(0, 12) + "..." : "None"}</p>
+            <p className="text-gray-500 text-xs uppercase">Session (this project)</p>
+            <p className="font-mono text-xs">{session?.session_id ? session.session_id.slice(0, 12) + "..." : "None"}</p>
           </div>
           <div>
-            <p className="text-gray-500 text-xs uppercase">Tokens</p>
-            <p>{agent.last_token_count?.toLocaleString() ?? 0}</p>
+            <p className="text-gray-500 text-xs uppercase">Tokens (this project)</p>
+            <p>{session?.last_token_count?.toLocaleString() ?? 0}</p>
           </div>
         </div>
       </div>

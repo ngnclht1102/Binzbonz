@@ -1,7 +1,7 @@
 "use client";
 import { useEffect, useState, useRef } from "react";
 import Link from "next/link";
-import { useParams, usePathname } from "next/navigation";
+import { useParams, usePathname, useRouter } from "next/navigation";
 import { useProjectsStore } from "@/lib/stores/projects-store";
 import { useTasksStore } from "@/lib/stores/tasks-store";
 import { useEventsStore } from "@/lib/stores/events-store";
@@ -24,6 +24,7 @@ import {
   getEpicFeatures,
   updateTask as apiUpdateTask,
   updateProject as apiUpdateProject,
+  deleteProject as apiDeleteProject,
   type Task,
   type Comment,
   type Actor,
@@ -475,15 +476,104 @@ function TaskDetail({
   );
 }
 
+function DeleteProjectDialog({
+  projectName,
+  onConfirm,
+  onClose,
+}: {
+  projectName: string;
+  onConfirm: (deleteFiles: boolean) => Promise<void>;
+  onClose: () => void;
+}) {
+  const [deleteFiles, setDeleteFiles] = useState(false);
+  const [confirmText, setConfirmText] = useState("");
+  const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState("");
+
+  const handleConfirm = async () => {
+    setSubmitting(true);
+    setError("");
+    try {
+      await onConfirm(deleteFiles);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to delete");
+      setSubmitting(false);
+    }
+  };
+
+  const canConfirm = confirmText === projectName && !submitting;
+
+  return (
+    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+      <div className="bg-gray-900 border border-gray-700 rounded-lg p-6 w-full max-w-md">
+        <h3 className="font-bold text-lg mb-2">Delete Project</h3>
+        <p className="text-sm text-gray-300 mb-4">
+          This will permanently delete <span className="font-semibold text-white">{projectName}</span> and
+          all its MVPs, sprints, epics, features, tasks, comments, and wake events. This cannot be undone.
+        </p>
+
+        <label className="flex items-start gap-2 mb-4 cursor-pointer">
+          <input
+            type="checkbox"
+            checked={deleteFiles}
+            onChange={(e) => setDeleteFiles(e.target.checked)}
+            className="mt-0.5"
+          />
+          <span className="text-sm text-gray-300">
+            Also delete the workspace files on disk
+            <span className="block text-xs text-gray-500">
+              (the entire <code className="text-gray-400">repo_path</code> directory will be removed recursively)
+            </span>
+          </span>
+        </label>
+
+        <div className="mb-4">
+          <label className="block text-xs text-gray-500 mb-1">
+            Type <span className="text-gray-300 font-mono">{projectName}</span> to confirm:
+          </label>
+          <input
+            type="text"
+            value={confirmText}
+            onChange={(e) => setConfirmText(e.target.value)}
+            className="w-full px-3 py-1.5 bg-gray-800 border border-gray-700 rounded text-sm font-mono focus:outline-none focus:border-red-500"
+            autoFocus
+          />
+        </div>
+
+        {error && <p className="text-red-400 text-sm mb-3">{error}</p>}
+
+        <div className="flex justify-end gap-2">
+          <button
+            onClick={onClose}
+            disabled={submitting}
+            className="px-3 py-1.5 bg-gray-700 hover:bg-gray-600 rounded text-sm disabled:opacity-50"
+          >
+            Cancel
+          </button>
+          <button
+            onClick={handleConfirm}
+            disabled={!canConfirm}
+            className="px-3 py-1.5 bg-red-600 hover:bg-red-500 rounded text-sm font-medium disabled:bg-gray-700 disabled:text-gray-500"
+          >
+            {submitting ? "Deleting..." : "Delete Project"}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function ProjectDetailPage() {
   const params = useParams();
   const pathname = usePathname();
+  const router = useRouter();
   const id = params.id as string;
   const { activeProject, loading: projectLoading, fetchProject } = useProjectsStore();
   const { tasks, loading: tasksLoading, fetchTasks, selectedTaskId, selectTask, comments, commentsLoading, postComment } = useTasksStore();
   const { connect, disconnect, onEvent } = useEventsStore();
   const { allActors: agents, fetchAgents } = useActorsStore();
   const [showNewTask, setShowNewTask] = useState(false);
+  const [showDelete, setShowDelete] = useState(false);
 
   useEffect(() => {
     fetchProject(id);
@@ -511,6 +601,7 @@ export default function ProjectDetailPage() {
     { label: "Board", href: `/projects/${id}` },
     { label: "Tree", href: `/projects/${id}/tree` },
     { label: "Agents", href: `/projects/${id}/agents` },
+    { label: "Files", href: `/projects/${id}/files` },
   ];
 
   const tasksByStatus = COLUMNS.map((status) => ({
@@ -549,6 +640,13 @@ export default function ProjectDetailPage() {
             <option value="active">active</option>
             <option value="completed">completed</option>
           </select>
+          <button
+            onClick={() => setShowDelete(true)}
+            className="ml-auto text-xs px-2 py-1 text-red-400 hover:text-red-300 hover:bg-red-900/30 rounded transition-colors"
+            title="Delete project"
+          >
+            Delete
+          </button>
         </div>
         <p className="text-gray-400 text-sm">{activeProject.brief}</p>
       </div>
@@ -607,6 +705,17 @@ export default function ProjectDetailPage() {
           tasks={tasks}
           onCreated={() => fetchTasks(id)}
           onClose={() => setShowNewTask(false)}
+        />
+      )}
+
+      {showDelete && (
+        <DeleteProjectDialog
+          projectName={activeProject.name}
+          onConfirm={async (deleteFiles) => {
+            await apiDeleteProject(id, deleteFiles);
+            router.push("/projects");
+          }}
+          onClose={() => setShowDelete(false)}
         />
       )}
 

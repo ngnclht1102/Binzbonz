@@ -1,4 +1,4 @@
-import { IsString, IsIn, IsOptional, IsInt } from 'class-validator';
+import { IsString, IsIn, IsOptional } from 'class-validator';
 
 export class UpdateActorDto {
   @IsOptional()
@@ -8,14 +8,6 @@ export class UpdateActorDto {
   @IsOptional()
   @IsIn(['idle', 'working', 'compacting'])
   status?: string;
-
-  @IsOptional()
-  @IsString()
-  session_id?: string;
-
-  @IsOptional()
-  @IsInt()
-  last_token_count?: number;
 
   @IsOptional()
   @IsString()

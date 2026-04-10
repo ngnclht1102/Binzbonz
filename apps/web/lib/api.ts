@@ -12,7 +12,11 @@ async function request<T>(path: string, options?: RequestInit): Promise<T> {
     const body = await res.json().catch(() => ({}));
     throw new Error(body.message ?? `HTTP ${res.status}`);
   }
-  return res.json() as Promise<T>;
+  // Handle empty / null bodies (NestJS controllers returning `null` send a
+  // 200 with no body, which would otherwise crash res.json()).
+  const text = await res.text();
+  if (!text) return null as unknown as T;
+  return JSON.parse(text) as T;
 }
 
 // Types
@@ -22,10 +26,21 @@ export interface Actor {
   type: string;
   role: string | null;
   status: string;
+  created_at: string;
+}
+
+/** Per-project session row, joined with project info when listed for an agent. */
+export interface AgentProjectSession {
+  id: string;
+  agent_id: string;
+  project_id: string;
   session_id: string | null;
   last_token_count: number;
   last_active_at: string | null;
   created_at: string;
+  updated_at: string;
+  project?: Project;
+  agent?: Actor;
 }
 
 export interface Project {
@@ -72,6 +87,22 @@ export const getActor = (id: string) => request<Actor>(`/actors/${id}`);
 export const createActor = (data: { name: string; type: string; role?: string }) =>
   request<Actor>("/actors", { method: "POST", body: JSON.stringify(data) });
 
+// Agent Project Sessions
+export const getAgentProjectSessions = (agentId: string) =>
+  request<AgentProjectSession[]>(
+    `/agent-project-sessions?agent_id=${encodeURIComponent(agentId)}`,
+  );
+export const getProjectAgentSessions = (projectId: string) =>
+  request<AgentProjectSession[]>(
+    `/agent-project-sessions?project_id=${encodeURIComponent(projectId)}`,
+  );
+export const getAgentProjectSession = (agentId: string, projectId: string) =>
+  request<AgentProjectSession | null>(
+    `/agent-project-sessions?agent_id=${encodeURIComponent(agentId)}&project_id=${encodeURIComponent(projectId)}`,
+  );
+export const deleteAgentProjectSession = (id: string) =>
+  request<{ deleted: boolean }>(`/agent-project-sessions/${id}`, { method: "DELETE" });
+
 // Wake Events
 export interface WakeEvent {
   id: string;
@@ -98,6 +129,11 @@ export const createProject = (data: { name: string; brief: string; repo_path?: s
   request<Project>("/projects", { method: "POST", body: JSON.stringify(data) });
 export const updateProject = (id: string, data: Partial<Project>) =>
   request<Project>(`/projects/${id}`, { method: "PATCH", body: JSON.stringify(data) });
+export const deleteProject = (id: string, deleteFiles = false) =>
+  request<{ deleted: boolean; files_deleted: boolean }>(
+    `/projects/${id}${deleteFiles ? "?delete_files=true" : ""}`,
+    { method: "DELETE" },
+  );
 
 // Filesystem (directory browser)
 export interface DirEntry { name: string; path: string; is_directory: boolean; }
@@ -193,6 +229,86 @@ export async function ensureFeature(projectId: string): Promise<string> {
 }
 
 export const ensureDefaultHierarchy = ensureFeature;
+
+// Project Files (file tree + editor)
+export interface ProjectFileEntry {
+  name: string;
+  is_directory: boolean;
+  size: number | null;
+  mtime: string;
+}
+export interface ProjectFileBrowse {
+  cwd: string;
+  relative: string;
+  parent: string | null;
+  entries: ProjectFileEntry[];
+}
+export interface ProjectFileRead {
+  path: string;
+  content: string;
+  mtime: string;
+  size: number;
+  is_binary: boolean;
+}
+export interface ProjectFileStat {
+  mtime: string;
+  size: number;
+  is_directory: boolean;
+}
+
+export const browseProjectFiles = (projectId: string, path?: string) => {
+  const qs = path ? `?path=${encodeURIComponent(path)}` : "";
+  return request<ProjectFileBrowse>(`/projects/${projectId}/files${qs}`);
+};
+
+export const readProjectFile = (projectId: string, path: string) =>
+  request<ProjectFileRead>(
+    `/projects/${projectId}/files/read?path=${encodeURIComponent(path)}`,
+  );
+
+export const statProjectFile = (projectId: string, path: string) =>
+  request<ProjectFileStat>(
+    `/projects/${projectId}/files/stat?path=${encodeURIComponent(path)}`,
+  );
+
+export const writeProjectFile = (
+  projectId: string,
+  data: { path: string; content: string; expected_mtime?: string },
+) =>
+  request<{ path: string; mtime: string; size: number }>(
+    `/projects/${projectId}/files/write`,
+    { method: "POST", body: JSON.stringify(data) },
+  );
+
+export const mkdirProjectFile = (projectId: string, parent: string, name: string) =>
+  request<{ path: string }>(`/projects/${projectId}/files/mkdir`, {
+    method: "POST",
+    body: JSON.stringify({ parent, name }),
+  });
+
+export const touchProjectFile = (projectId: string, parent: string, name: string) =>
+  request<{ path: string }>(`/projects/${projectId}/files/touch`, {
+    method: "POST",
+    body: JSON.stringify({ parent, name }),
+  });
+
+export const deleteProjectFile = (projectId: string, path: string) =>
+  request<{ deleted: boolean; path: string }>(
+    `/projects/${projectId}/files?path=${encodeURIComponent(path)}`,
+    { method: "DELETE" },
+  );
+
+export const copyProjectFile = (projectId: string, from: string, to: string) =>
+  request<{ from: string; to: string }>(`/projects/${projectId}/files/copy`, {
+    method: "POST",
+    body: JSON.stringify({ from, to }),
+  });
+
+export const moveProjectFile = (projectId: string, from: string, to: string) =>
+  request<{ from: string; to: string }>(`/projects/${projectId}/files/move`, {
+    method: "POST",
+    body: JSON.stringify({ from, to }),
+  });
 
 // SSE
 export const API_SSE_URL = `${API_URL}/events/stream`;

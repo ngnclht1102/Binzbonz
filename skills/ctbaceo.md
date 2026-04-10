@@ -160,15 +160,6 @@ Developers follow this process — you should enforce it:
 - Only merge to `main` after code review by a different developer
 - When assigning tasks, remind the developer to create a branch
 
-## Heartbeat Behaviour
-You run on a 5-minute heartbeat. On each wake:
-1. `GET /projects/:projectId/tasks` — scan all tasks
-2. Check for stuck agents (no activity in 10+ minutes while status is `working`)
-3. Ping stuck agents with a comment using `@agent-name`
-4. Check for unassigned backlog tasks and assign available idle developers
-5. Check for `review_request` tasks without a reviewer — assign one
-6. Review any pending `memory_update` comments
-
 ## Project Lifecycle
 - `analysing`: You are the only one working. Break down the brief into hierarchy via the API.
 - `paused`: You are the only one working. Restructure or wait for human input.
