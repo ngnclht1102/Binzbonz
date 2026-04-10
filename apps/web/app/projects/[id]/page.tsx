@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import Link from "next/link";
 import { useParams, usePathname } from "next/navigation";
 import { useProjectsStore } from "@/lib/stores/projects-store";
@@ -8,6 +8,10 @@ import { useEventsStore } from "@/lib/stores/events-store";
 import { useActorsStore } from "@/lib/stores/actors-store";
 import {
   ensureDefaultHierarchy,
+  ensureMvp,
+  ensureSprint,
+  ensureEpic,
+  ensureFeature,
   createTask,
   createSubtask,
   createMvp,
@@ -164,8 +168,8 @@ function NewTicketDialog({
 
   const handleSubmit = async () => {
     if (!title.trim()) { setError("Title is required"); return; }
-    if (needsParent && !parentId && parents.length === 0) {
-      setError(`No parent ${ticketType === "sprint" ? "MVP" : ticketType === "epic" ? "Sprint" : ticketType === "feature" ? "Epic" : ticketType === "subtask" ? "Task" : "Feature"} exists. Create one first.`);
+    if (ticketType === "subtask" && !parentId) {
+      setError("Select a parent task for subtasks");
       return;
     }
     setSubmitting(true);
@@ -175,22 +179,18 @@ function NewTicketDialog({
       if (ticketType === "mvp") {
         await createMvp(projectId, data);
       } else if (ticketType === "sprint") {
-        const pid = parentId || (await ensureParent());
+        const pid = parentId || await ensureMvp(projectId);
         await createSprint(pid, data);
       } else if (ticketType === "epic") {
-        const pid = parentId || (await ensureParent());
+        const pid = parentId || await ensureSprint(projectId);
         await createEpic(pid, data);
       } else if (ticketType === "feature") {
-        const pid = parentId || (await ensureParent());
+        const pid = parentId || await ensureEpic(projectId);
         await createFeature(pid, data);
       } else if (ticketType === "task") {
-        let featureId = parentId;
-        if (!featureId) {
-          featureId = await ensureDefaultHierarchy(projectId);
-        }
-        await createTask(featureId, data);
+        const pid = parentId || await ensureFeature(projectId);
+        await createTask(pid, data);
       } else if (ticketType === "subtask") {
-        if (!parentId) { setError("Select a parent task"); setSubmitting(false); return; }
         await createSubtask(parentId, data);
       }
       onCreated();
@@ -200,11 +200,6 @@ function NewTicketDialog({
       setSubmitting(false);
     }
   };
-
-  async function ensureParent(): Promise<string> {
-    // Auto-create missing hierarchy up to the needed parent
-    return ensureDefaultHierarchy(projectId);
-  }
 
   const parentLabel = ticketType === "sprint" ? "Parent MVP"
     : ticketType === "epic" ? "Parent Sprint"
@@ -232,16 +227,38 @@ function NewTicketDialog({
             </select>
           </div>
 
-          {/* Parent Selection */}
-          {needsParent && (
+          {/* Parent Selection (optional — auto-creates if empty) */}
+          {needsParent && ticketType !== "subtask" && (
             <div>
-              <label className="block text-xs font-medium text-gray-500 uppercase mb-1">{parentLabel}</label>
+              <label className="block text-xs font-medium text-gray-500 uppercase mb-1">
+                {parentLabel} <span className="text-gray-600 font-normal">(optional)</span>
+              </label>
               {loadingParents ? (
                 <p className="text-xs text-gray-500">Loading...</p>
               ) : parents.length === 0 ? (
                 <p className="text-xs text-gray-400">
-                  {ticketType === "task" ? "No features yet — one will be auto-created" : `No parent found. Create a ${parentLabel.replace("Parent ", "")} first.`}
+                  No existing {parentLabel.replace("Parent ", "").toLowerCase()}s — one will be auto-created.
                 </p>
+              ) : (
+                <select
+                  value={parentId}
+                  onChange={(e) => setParentId(e.target.value)}
+                  className="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded text-sm focus:outline-none focus:border-blue-500"
+                >
+                  <option value="">Auto (create default)</option>
+                  {parents.map((p) => (
+                    <option key={p.id} value={p.id}>{p.label}</option>
+                  ))}
+                </select>
+              )}
+            </div>
+          )}
+          {/* Subtask MUST have a parent */}
+          {ticketType === "subtask" && (
+            <div>
+              <label className="block text-xs font-medium text-gray-500 uppercase mb-1">{parentLabel}</label>
+              {parents.length === 0 ? (
+                <p className="text-xs text-red-400">No tasks exist yet. Create a task first.</p>
               ) : (
                 <select
                   value={parentId}
@@ -298,6 +315,7 @@ function TaskDetail({
   comments,
   loading,
   agents,
+  projectId,
   onClose,
   onPostComment,
   onAssign,
@@ -307,6 +325,7 @@ function TaskDetail({
   comments: Comment[];
   loading: boolean;
   agents: Actor[];
+  projectId: string;
   onClose: () => void;
   onPostComment: (body: string) => void;
   onAssign: (agentId: string | null) => void;
@@ -315,93 +334,118 @@ function TaskDetail({
   const [commentBody, setCommentBody] = useState("");
   const [statusError, setStatusError] = useState("");
   const agentActors = agents.filter((a) => a.type === "agent");
+  const commentsEndRef = useRef<HTMLDivElement>(null);
+  const prevCommentsLen = useRef(comments.length);
+
+  // Auto-scroll only when NEW comments arrive
+  useEffect(() => {
+    if (comments.length > prevCommentsLen.current) {
+      commentsEndRef.current?.scrollIntoView({ behavior: "smooth" });
+    }
+    prevCommentsLen.current = comments.length;
+  }, [comments.length]);
 
   return (
-    <div className="fixed inset-y-0 right-0 w-96 bg-gray-900 border-l border-gray-800 p-6 overflow-auto z-50">
-      <div className="flex items-center justify-between mb-4">
-        <h3 className="font-bold text-lg">{task.title}</h3>
-        <button onClick={onClose} className="text-gray-400 hover:text-white text-xl">
-          &times;
-        </button>
-      </div>
-
-      {/* Status */}
-      <div className="mb-3">
-        <h4 className="text-xs font-medium text-gray-500 uppercase mb-1">Status</h4>
-        <select
-          value={task.status}
-          onChange={async (e) => {
-            setStatusError("");
-            try {
-              onStatusChange(e.target.value);
-            } catch (err) {
-              setStatusError(err instanceof Error ? err.message : "Failed");
-            }
-          }}
-          className={`w-full px-2 py-1.5 bg-gray-800 border border-gray-700 rounded text-sm focus:outline-none focus:border-blue-500`}
-        >
-          {ALL_TASK_STATUSES.map((s) => (
-            <option key={s} value={s}>{s.replace("_", " ")}</option>
-          ))}
-        </select>
-        {statusError && <p className="text-red-400 text-xs mt-1">{statusError}</p>}
-      </div>
-
-      {/* Agent Assignment */}
-      <div className="mb-4">
-        <h4 className="text-xs font-medium text-gray-500 uppercase mb-1">Assigned Agent</h4>
-        <select
-          value={task.assigned_agent_id ?? ""}
-          onChange={(e) => onAssign(e.target.value || null)}
-          className="w-full px-2 py-1.5 bg-gray-800 border border-gray-700 rounded text-sm focus:outline-none focus:border-blue-500"
-        >
-          <option value="">Unassigned</option>
-          {agentActors.map((a) => (
-            <option key={a.id} value={a.id}>{a.name} ({a.role})</option>
-          ))}
-        </select>
-      </div>
-
-      {task.description && (
-        <p className="text-sm text-gray-300 mb-4">{task.description}</p>
-      )}
-
-      {task.subtasks?.length > 0 && (
-        <div className="mb-4">
-          <h4 className="text-xs font-medium text-gray-500 uppercase mb-1">Subtasks</h4>
-          {task.subtasks.map((s) => (
-            <div key={s.id} className="text-sm text-gray-300 py-1">{s.title}</div>
-          ))}
+    <div className="fixed inset-y-0 right-0 w-96 bg-gray-900 border-l border-gray-800 z-50 flex flex-col">
+      {/* Header — fixed */}
+      <div className="flex items-center justify-between p-4 border-b border-gray-800 shrink-0">
+        <h3 className="font-bold text-lg truncate">{task.title}</h3>
+        <div className="flex items-center gap-1 shrink-0">
+          <Link
+            href={`/projects/${projectId}/tasks/${task.id}`}
+            className="text-gray-400 hover:text-white p-1 rounded hover:bg-gray-700 text-sm"
+            title="Open full page"
+          >
+            ⛶
+          </Link>
+          <button onClick={onClose} className="text-gray-400 hover:text-white p-1 rounded hover:bg-gray-700 text-xl">
+            &times;
+          </button>
         </div>
-      )}
-
-      <h4 className="text-xs font-medium text-gray-500 uppercase mb-2">
-        Comments {loading ? "(loading...)" : `(${comments.length})`}
-      </h4>
-      <div className="flex flex-col gap-2">
-        {comments.map((c) => (
-          <div key={c.id} className="bg-gray-800 rounded p-2 text-sm">
-            <div className="flex items-center gap-2 mb-1">
-              <span className="font-medium text-gray-200">{c.actor?.name ?? "unknown"}</span>
-              <span className="text-xs text-gray-500">
-                {new Date(c.created_at).toLocaleTimeString()}
-              </span>
-              <span className="text-xs text-gray-600">{c.comment_type}</span>
-            </div>
-            <p className="text-gray-300 whitespace-pre-wrap">
-              {c.body.split(/(@[\w-]+)/g).map((part, i) =>
-                part.startsWith("@") ? (
-                  <span key={i} className="text-blue-400 font-medium">{part}</span>
-                ) : (
-                  part
-                ),
-              )}
-            </p>
-          </div>
-        ))}
       </div>
 
-      <div className="mt-4 flex gap-2">
+      {/* Scrollable content */}
+      <div className="flex-1 overflow-auto p-4">
+        {/* Status */}
+        <div className="mb-3">
+          <h4 className="text-xs font-medium text-gray-500 uppercase mb-1">Status</h4>
+          <select
+            value={task.status}
+            onChange={async (e) => {
+              setStatusError("");
+              try {
+                onStatusChange(e.target.value);
+              } catch (err) {
+                setStatusError(err instanceof Error ? err.message : "Failed");
+              }
+            }}
+            className="w-full px-2 py-1.5 bg-gray-800 border border-gray-700 rounded text-sm"
+          >
+            {ALL_TASK_STATUSES.map((s) => (
+              <option key={s} value={s}>{s.replace("_", " ")}</option>
+            ))}
+          </select>
+          {statusError && <p className="text-red-400 text-xs mt-1">{statusError}</p>}
+        </div>
+
+        {/* Agent Assignment */}
+        <div className="mb-4">
+          <h4 className="text-xs font-medium text-gray-500 uppercase mb-1">Assigned Agent</h4>
+          <select
+            value={task.assigned_agent_id ?? ""}
+            onChange={(e) => onAssign(e.target.value || null)}
+            className="w-full px-2 py-1.5 bg-gray-800 border border-gray-700 rounded text-sm"
+          >
+            <option value="">Unassigned</option>
+            {agentActors.map((a) => (
+              <option key={a.id} value={a.id}>{a.name} ({a.role})</option>
+            ))}
+          </select>
+        </div>
+
+        {task.description && (
+          <p className="text-sm text-gray-300 mb-4">{task.description}</p>
+        )}
+
+        {task.subtasks?.length > 0 && (
+          <div className="mb-4">
+            <h4 className="text-xs font-medium text-gray-500 uppercase mb-1">Subtasks</h4>
+            {task.subtasks.map((s) => (
+              <div key={s.id} className="text-sm text-gray-300 py-1">{s.title}</div>
+            ))}
+          </div>
+        )}
+
+        <h4 className="text-xs font-medium text-gray-500 uppercase mb-2">
+          Comments {loading ? "(loading...)" : `(${comments.length})`}
+        </h4>
+        <div className="flex flex-col gap-2">
+          {comments.map((c) => (
+            <div key={c.id} className="bg-gray-800 rounded p-2 text-sm">
+              <div className="flex items-center gap-2 mb-1">
+                <span className="font-medium text-gray-200">{c.actor?.name ?? "unknown"}</span>
+                <span className="text-xs text-gray-500">
+                  {new Date(c.created_at).toLocaleTimeString()}
+                </span>
+                <span className="text-xs text-gray-600">{c.comment_type}</span>
+              </div>
+              <p className="text-gray-300 whitespace-pre-wrap">
+                {c.body.split(/(@[\w-]+)/g).map((part, i) =>
+                  part.startsWith("@") ? (
+                    <span key={i} className="text-blue-400 font-medium">{part}</span>
+                  ) : (
+                    part
+                  ),
+                )}
+              </p>
+            </div>
+          ))}
+          <div ref={commentsEndRef} />
+        </div>
+      </div>
+
+      {/* Comment input — fixed at bottom */}
+      <div className="p-4 border-t border-gray-800 shrink-0 flex gap-2">
         <input
           type="text"
           value={commentBody}
@@ -572,6 +616,7 @@ export default function ProjectDetailPage() {
           comments={comments}
           loading={commentsLoading}
           agents={agents}
+          projectId={id}
           onClose={() => selectTask(null)}
           onAssign={handleAssign}
           onStatusChange={async (status) => {

@@ -4,7 +4,8 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "tsx watch src/index.ts",
+    "dev": "bash watchdog.sh",
+    "dev:direct": "tsx watch src/index.ts",
     "build": "tsup src/index.ts --format esm --dts --outDir dist",
     "start": "node dist/index.js",
     "lint": "echo 'no lint configured'"

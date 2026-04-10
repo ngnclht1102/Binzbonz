@@ -11,6 +11,6 @@
   },
   "packageManager": "pnpm@10.30.1",
   "pnpm": {
-    "onlyBuiltDependencies": ["@nestjs/core", "esbuild", "@embedded-postgres/darwin-arm64"]
+    "onlyBuiltDependencies": ["@nestjs/core", "esbuild", "@embedded-postgres/darwin-arm64", "node-pty", "@homebridge/node-pty-prebuilt-multiarch"]
   }
 }

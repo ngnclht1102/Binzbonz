@@ -1,10 +1,12 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { WakeEvent } from './wake-event.entity.js';
 
 @Injectable()
 export class WakeEventsService {
+  private readonly logger = new Logger(WakeEventsService.name);
+
   constructor(
     @InjectRepository(WakeEvent)
     private readonly repo: Repository<WakeEvent>,
@@ -30,18 +32,24 @@ export class WakeEventsService {
     return event;
   }
 
-  create(dto: {
+  async create(dto: {
     agent_id: string;
     project_id: string;
     triggered_by: string;
     comment_id?: string;
   }) {
-    return this.repo.save(this.repo.create({ ...dto, status: 'pending' }));
+    this.logger.log(`Creating wake event: agent=${dto.agent_id.slice(0, 8)} trigger=${dto.triggered_by}`);
+    const event = await this.repo.save(this.repo.create({ ...dto, status: 'pending' }));
+    this.logger.log(`Wake event created: ${event.id.slice(0, 8)} status=pending`);
+    return event;
   }
 
   async update(id: string, dto: { status: string }) {
     const event = await this.findOne(id);
+    const oldStatus = event.status;
     event.status = dto.status;
-    return this.repo.save(event);
+    const saved = await this.repo.save(event);
+    this.logger.log(`Wake event ${id.slice(0, 8)}: ${oldStatus} -> ${dto.status}`);
+    return saved;
   }
 }

@@ -1,5 +1,7 @@
 import {
   getPendingEvents,
+  getProcessingEvents,
+  getActors,
   getActor,
   getProject,
   updateWakeEvent,
@@ -8,15 +10,41 @@ import {
 } from './api-client.js';
 import { buildPrompt } from './prompt-builder.js';
 import { spawnClaude } from './claude-spawner.js';
+import { log, warn, error as logError } from './logger.js';
 
 const API_URL = process.env.API_URL ?? 'http://localhost:3001';
 const POLL_INTERVAL = 2000;
-const STREAM_FLUSH_MS = 2000; // Post accumulated text every 2s
 
 let processing = false;
+let startupCleanupDone = false;
 
-console.log(`agent-runner started (API: ${API_URL})`);
-console.log('Polling for wake events (1 at a time)...');
+log('runner',`agent-runner started (API: ${API_URL})`);
+
+async function startupCleanup(): Promise<void> {
+  if (startupCleanupDone) return;
+  try {
+    // Reset stale 'processing' events back to 'pending'
+    const staleEvents = await getProcessingEvents();
+    for (const e of staleEvents) {
+      log("cleanup",` Resetting stale processing event ${e.id} → pending`);
+      await updateWakeEvent(e.id, 'pending');
+    }
+
+    // Reset stale 'working' actors back to 'idle'
+    const actors = await getActors();
+    for (const a of actors) {
+      if (a.status === 'working') {
+        log("cleanup",` Resetting stale working actor ${a.name} → idle`);
+        await updateActor(a.id, { status: 'idle' });
+      }
+    }
+
+    startupCleanupDone = true;
+    log('runner', 'Startup cleanup done. Polling for wake events (1 at a time)...');
+  } catch {
+    // API not ready yet, will retry next poll
+  }
+}
 
 async function processEvent(eventId: string): Promise<void> {
   const event = await updateWakeEvent(eventId, 'processing');
@@ -25,89 +53,103 @@ async function processEvent(eventId: string): Promise<void> {
     const actor = await getActor(event.agent_id);
     const project = await getProject(event.project_id);
 
-    // Gate check
+    // Gate check: project status
     if (
       (project.status === 'analysing' || project.status === 'paused') &&
       actor.role !== 'ctbaceo'
     ) {
-      console.log(`[runner] Skipping ${actor.name}: project is ${project.status}`);
+      log("runner",` Skipping ${actor.name}: project is ${project.status}`);
       await updateWakeEvent(eventId, 'skipped');
       return;
     }
 
     await updateActor(actor.id, { status: 'working' });
 
-    const { prompt } = await buildPrompt(event, actor);
+    let { prompt, isNewSession } = await buildPrompt(event, actor);
     const taskId = event.task_id;
 
-    console.log(`[runner] >>> Processing: ${actor.name} (${event.triggered_by})${taskId ? ` on task ${taskId.slice(0, 8)}` : ''}`);
+    log("runner",` >>> Processing: ${actor.name} (${event.triggered_by})${taskId ? ` on task ${taskId.slice(0, 8)}` : ''} [${isNewSession ? 'NEW session' : 'RESUME ' + actor.session_id?.slice(0, 8)}] prompt=${prompt.length} chars`);
 
-    // Post a "working" indicator comment
+    // Post "working" indicator immediately so UI shows activity
     if (taskId) {
-      await postComment(taskId, actor.id, '🔄 Agent started working...', 'update').catch(() => {});
+      await postComment(taskId, actor.id, '🔄 Working...', 'update').catch(() => {});
     }
 
-    // Stream Claude output — accumulate chunks and post periodically as comments
-    let textBuffer = '';
-    let flushTimer: ReturnType<typeof setTimeout> | null = null;
-    let commentCount = 0;
-
-    const flushBuffer = async () => {
-      if (!textBuffer.trim() || !taskId) return;
-      const chunk = textBuffer.trim();
-      textBuffer = '';
-      commentCount++;
-      try {
-        await postComment(taskId, actor.id, chunk, 'update');
-      } catch {
-        // ignore post failures
-      }
-    };
-
-    const onTextChunk = (text: string) => {
-      textBuffer += text;
-      // Flush on newlines or every STREAM_FLUSH_MS
-      if (text.includes('\n') && textBuffer.length > 50) {
-        if (flushTimer) clearTimeout(flushTimer);
-        flushTimer = setTimeout(() => { void flushBuffer(); }, 200);
-      } else if (!flushTimer) {
-        flushTimer = setTimeout(() => {
-          flushTimer = null;
-          void flushBuffer();
-        }, STREAM_FLUSH_MS);
-      }
-    };
-
-    const result = await spawnClaude(actor, prompt, taskId ? onTextChunk : undefined);
-
-    // Flush any remaining text
-    if (flushTimer) clearTimeout(flushTimer);
-    if (textBuffer.trim() && taskId) {
-      await flushBuffer();
+    // Periodic progress updates — post accumulated text every 10s
+    let progressBuffer = '';
+    let progressTimer: ReturnType<typeof setInterval> | null = null;
+    if (taskId) {
+      progressTimer = setInterval(async () => {
+        if (progressBuffer.trim().length > 50) {
+          const chunk = progressBuffer.trim();
+          progressBuffer = '';
+          await postComment(taskId, actor.id, chunk, 'update').catch(() => {});
+        }
+      }, 10_000);
     }
 
-    // If no streaming happened but there's output, post it all
-    if (commentCount === 0 && result.textOutput.trim() && taskId) {
-      // Split long output into chunks of ~2000 chars
-      const text = result.textOutput.trim();
-      for (let i = 0; i < text.length; i += 2000) {
-        await postComment(taskId, actor.id, text.slice(i, i + 2000), 'update').catch(() => {});
+    const onChunk = taskId ? (text: string) => { progressBuffer += text; } : undefined;
+
+    // Run Claude
+    let result = await spawnClaude(actor, prompt, project.repo_path ?? undefined, onChunk);
+
+    // Stop progress timer
+    if (progressTimer) clearInterval(progressTimer);
+
+    // FATAL ERROR (quota/rate limit) — comment and stop, don't retry or create new session
+    if (result.fatalError) {
+      logError("runner", `Fatal error for ${actor.name}: ${result.fatalError}`);
+      if (taskId) {
+        await postComment(
+          taskId, actor.id,
+          `🚫 Agent stopped: ${result.fatalError}\n\nThis is a non-retryable error (quota/rate limit). The task will remain in its current state. Try again later.`,
+          'block',
+        ).catch(() => {});
+      }
+      // Keep existing session_id — it's still valid, just can't use it right now
+      await updateActor(actor.id, { status: 'idle' });
+      await updateWakeEvent(eventId, 'failed');
+      log("runner", ` <<< Stopped (fatal): ${actor.name}`);
+      return;
+    }
+
+    // If spawner fell back to a new session, rebuild prompt with skill file and retry
+    if (result.isNewSession && !isNewSession) {
+      log("runner",` Session fallback detected — rebuilding prompt with skill file`);
+      actor.session_id = null;
+      const rebuilt = await buildPrompt(event, actor);
+      prompt = rebuilt.prompt;
+      isNewSession = true;
+      result = await spawnClaude({ ...actor, session_id: null }, prompt, project.repo_path ?? undefined, onChunk);
+
+      // Check fatal again after retry
+      if (result.fatalError) {
+        logError("runner", `Fatal error for ${actor.name} on new session: ${result.fatalError}`);
+        if (taskId) {
+          await postComment(taskId, actor.id, `🚫 Agent stopped: ${result.fatalError}`, 'block').catch(() => {});
+        }
+        await updateActor(actor.id, { status: 'idle' });
+        await updateWakeEvent(eventId, 'failed');
+        log("runner", ` <<< Stopped (fatal): ${actor.name}`);
+        return;
       }
     }
 
-    // If still no output at all, post stderr as debug info
-    if (commentCount === 0 && !result.textOutput.trim() && taskId && result.rawStderr.trim()) {
+    // Post any remaining buffered text
+    if (progressBuffer.trim() && taskId) {
+      await postComment(taskId, actor.id, progressBuffer.trim(), 'update').catch(() => {});
+    }
+
+    const output = result.textOutput.trim();
+    if (!output && taskId && result.rawStderr.trim()) {
       await postComment(taskId, actor.id, `⚠️ No output captured.\nstderr: ${result.rawStderr.slice(0, 500)}`, 'update').catch(() => {});
+    } else if (!output && taskId) {
+      await postComment(taskId, actor.id, '⚠️ Agent produced no output.', 'update').catch(() => {});
     }
 
-    // Post completion marker
-    if (taskId) {
-      await postComment(taskId, actor.id, '✅ Agent finished.', 'update').catch(() => {});
-    }
+    log("runner",` Agent ${actor.name} output: ${output.length} chars`);
 
-    console.log(`[runner] Agent ${actor.name} output: ${result.textOutput.length} chars, ${commentCount} streamed comments`);
-
-    // Update actor
+    // Update actor — save new session_id if one was created
     await updateActor(actor.id, {
       session_id: result.sessionId ?? undefined,
       last_token_count: result.inputTokens,
@@ -115,10 +157,10 @@ async function processEvent(eventId: string): Promise<void> {
     });
 
     await updateWakeEvent(eventId, 'done');
-    console.log(`[runner] <<< Done: ${actor.name}`);
+    log("runner",` <<< Done: ${actor.name}`);
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
-    console.error(`[runner] <<< Failed: ${msg}`);
+    logError("runner",` <<< Failed: ${msg}`);
 
     // Post failure notice on task
     if (event.task_id) {
@@ -137,13 +179,19 @@ async function processEvent(eventId: string): Promise<void> {
 async function poll(): Promise<void> {
   if (processing) return;
 
+  // Run startup cleanup on first successful poll
+  if (!startupCleanupDone) {
+    await startupCleanup();
+    return;
+  }
+
   try {
     const events = await getPendingEvents();
     if (events.length === 0) return;
 
     processing = true;
     const next = events[0];
-    console.log(`[runner] Queue: ${events.length} pending, processing 1...`);
+    log("runner",` Queue: ${events.length} pending, processing 1...`);
 
     try {
       await processEvent(next.id);
@@ -153,7 +201,7 @@ async function poll(): Promise<void> {
   } catch (err) {
     processing = false;
     if (err instanceof Error && !err.message.includes('fetch failed')) {
-      console.error('[runner] Poll error:', err.message);
+      logError('runner', `Poll error: ${err.message}`);
     }
   }
 }
@@ -162,12 +210,26 @@ const interval = setInterval(poll, POLL_INTERVAL);
 
 process.on('SIGINT', () => {
   clearInterval(interval);
-  console.log('agent-runner stopped');
+  log('runner','agent-runner stopped');
   process.exit(0);
 });
 
 process.on('SIGTERM', () => {
   clearInterval(interval);
-  console.log('agent-runner stopped');
+  log('runner','agent-runner stopped');
   process.exit(0);
+});
+
+process.on('uncaughtException', (err) => {
+  logError('runner', `Uncaught exception: ${err.message}`);
+  logError('runner', err.stack ?? '');
+  clearInterval(interval);
+  process.exit(1); // Watchdog will restart
+});
+
+process.on('unhandledRejection', (reason) => {
+  const msg = reason instanceof Error ? reason.message : String(reason);
+  logError('runner', `Unhandled rejection: ${msg}`);
+  clearInterval(interval);
+  process.exit(1); // Watchdog will restart
 });

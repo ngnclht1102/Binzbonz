@@ -1,0 +1,376 @@
+- generic [ref=e1]:
+  - complementary [ref=e2]:
+    - link "Binzbonz" [ref=e3] [cursor=pointer]:
+      - /url: /projects
+    - navigation [ref=e4]:
+      - link "Projects" [ref=e5] [cursor=pointer]:
+        - /url: /projects
+  - main [ref=e6]:
+    - generic [ref=e7]:
+      - button "← Back to agents" [ref=e8] [cursor=pointer]
+      - generic [ref=e9]:
+        - generic [ref=e10]:
+          - generic [ref=e11]:
+            - heading "ctbaceo" [level=1] [ref=e13]
+            - generic [ref=e14]: ctbaceo
+            - generic [ref=e15]: idle
+          - button ">_ Terminal" [active] [ref=e16] [cursor=pointer]:
+            - generic [ref=e17]: ">_"
+            - text: Terminal
+        - generic [ref=e18]:
+          - generic [ref=e19]:
+            - paragraph [ref=e20]: Type
+            - paragraph [ref=e21]: agent
+          - generic [ref=e22]:
+            - paragraph [ref=e23]: Last Active
+            - paragraph [ref=e24]: Never
+          - generic [ref=e25]:
+            - paragraph [ref=e26]: Session
+            - paragraph [ref=e27]: ac486cd1-3ed...
+          - generic [ref=e28]:
+            - paragraph [ref=e29]: Tokens
+            - paragraph [ref=e30]: "11"
+      - generic [ref=e31]:
+        - heading "History (11)" [level=2] [ref=e32]
+        - generic [ref=e33]:
+          - generic [ref=e34]:
+            - generic [ref=e35]:
+              - generic [ref=e36]: done
+              - generic [ref=e37]:
+                - paragraph [ref=e38]:
+                  - text: assignment
+                  - generic [ref=e39]: "task: 7b7081fb"
+                - paragraph [ref=e40]: NamTodo
+            - paragraph [ref=e41]: 4/9/2026, 9:19:31 AM
+          - generic [ref=e42]:
+            - generic [ref=e43]:
+              - generic [ref=e44]: done
+              - generic [ref=e45]:
+                - paragraph [ref=e46]:
+                  - text: assignment
+                  - generic [ref=e47]: "task: 6399b278"
+                - paragraph [ref=e48]: NamTodo
+            - paragraph [ref=e49]: 4/9/2026, 8:43:28 AM
+          - generic [ref=e50]:
+            - generic [ref=e51]:
+              - generic [ref=e52]: done
+              - generic [ref=e53]:
+                - paragraph [ref=e54]:
+                  - text: mention
+                  - generic [ref=e55]: "task: 52ac8260"
+                - paragraph [ref=e56]: NamTodo
+            - paragraph [ref=e57]: 4/9/2026, 7:55:49 AM
+          - generic [ref=e58]:
+            - generic [ref=e59]:
+              - generic [ref=e60]: done
+              - generic [ref=e61]:
+                - paragraph [ref=e62]:
+                  - text: assignment
+                  - generic [ref=e63]: "task: 52ac8260"
+                - paragraph [ref=e64]: NamTodo
+            - paragraph [ref=e65]: 4/9/2026, 6:57:00 AM
+          - generic [ref=e66]:
+            - generic [ref=e67]:
+              - generic [ref=e68]: done
+              - generic [ref=e69]:
+                - paragraph [ref=e70]:
+                  - text: mention
+                  - generic [ref=e71]: "task: e566e320"
+                - paragraph [ref=e72]: Todo
+            - paragraph [ref=e73]: 4/8/2026, 9:25:40 PM
+          - generic [ref=e74]:
+            - generic [ref=e75]:
+              - generic [ref=e76]: skipped
+              - generic [ref=e77]:
+                - paragraph [ref=e78]:
+                  - text: assignment
+                  - generic [ref=e79]: "task: e566e320"
+                - paragraph [ref=e80]: Todo
+            - paragraph [ref=e81]: 4/8/2026, 9:23:11 PM
+          - generic [ref=e82]:
+            - generic [ref=e83]:
+              - generic [ref=e84]: done
+              - generic [ref=e85]:
+                - paragraph [ref=e86]:
+                  - text: assignment
+                  - generic [ref=e87]: "task: 37ca0b92"
+                - paragraph [ref=e88]: Todo
+            - paragraph [ref=e89]: 4/8/2026, 9:20:01 PM
+          - generic [ref=e90]:
+            - generic [ref=e91]:
+              - generic [ref=e92]: done
+              - generic [ref=e93]:
+                - paragraph [ref=e94]:
+                  - text: mention
+                  - generic [ref=e95]: "task: 8cf0fb6d"
+                - paragraph [ref=e96]: Todo
+            - paragraph [ref=e97]: 4/8/2026, 9:04:13 PM
+          - generic [ref=e98]:
+            - generic [ref=e99]:
+              - generic [ref=e100]: done
+              - generic [ref=e101]:
+                - paragraph [ref=e102]:
+                  - text: mention
+                  - generic [ref=e103]: "task: 8cf0fb6d"
+                - paragraph [ref=e104]: Todo
+            - paragraph [ref=e105]: 4/8/2026, 9:01:03 PM
+          - generic [ref=e106]:
+            - generic [ref=e107]:
+              - generic [ref=e108]: done
+              - generic [ref=e109]:
+                - paragraph [ref=e110]:
+                  - text: mention
+                  - generic [ref=e111]: "task: 8cf0fb6d"
+                - paragraph [ref=e112]: Todo
+            - paragraph [ref=e113]: 4/8/2026, 8:57:51 PM
+          - generic [ref=e114]:
+            - generic [ref=e115]:
+              - generic [ref=e116]: done
+              - generic [ref=e117]:
+                - paragraph [ref=e118]: mention
+                - paragraph [ref=e119]: Todo
+            - paragraph [ref=e120]: 4/8/2026, 8:52:25 PM
+      - generic [ref=e122]:
+        - generic [ref=e123]:
+          - generic [ref=e124]:
+            - generic [ref=e125]: "Terminal: ctbaceo"
+            - generic [ref=e126]: connected
+          - button "Close (Esc)" [ref=e127] [cursor=pointer]
+        - generic [ref=e128]:
+          - generic [ref=e131]:
+            - textbox "Terminal input" [ref=e132]
+            - generic:
+              - generic:
+                - generic: Connecting to ctbaceo...
+              - generic:
+                - generic: 🔌
+                - generic: Connected to ctbaceo (ctbaceo) — interactive session in /Users/namng/Work/bTodo
+              - generic:
+                - generic: Welcome
+                - generic: to
+                - generic: Claude
+                - generic: Code
+                - generic: v2.1.92
+              - generic:
+                - generic: …………………………………………………………………………………………………………………………………………………………
+              - generic:
+                - generic: ░░░░░░
+              - generic:
+                - generic: ░░░ ░░░░░░░░░░
+              - generic:
+                - generic: ░░░░░░░░░░░░░░░░░░░
+              - generic:
+                - generic: ░░░░
+                - generic: ██
+              - generic:
+                - generic: ░░░░░░░░░░
+                - generic: ██▒▒██
+              - generic:
+                - generic: ▒▒ ██ ▒
+              - generic:
+                - generic: █████████
+                - generic: ▒▒░░▒▒ ▒ ▒▒
+              - generic:
+                - generic: ██▄█████▄██
+                - generic: ▒▒ ▒▒
+              - generic:
+                - generic: █████████
+                - generic: ░ ▒
+              - generic:
+                - generic: …………………
+                - generic: █
+                - generic: █
+                - generic: █
+                - generic: █
+                - generic: ……………………………………………………………………░…………………………▒…………
+              - generic:
+                - generic: Let's get started.
+              - generic:
+                - generic: Choose
+                - generic: the
+                - generic: text
+                - generic: style
+                - generic: that
+                - generic: looks
+                - generic: best
+                - generic: with
+                - generic: your
+                - generic: terminal
+              - generic:
+                - generic: To
+                - generic: change
+                - generic: this
+                - generic: later,
+                - generic: run
+                - generic: /theme
+              - generic:
+                - generic: "1."
+                - generic: Dark mode
+              - generic:
+                - generic: ❯
+                - generic: "2."
+                - generic: Light
+                - generic: mode
+                - generic: ✔
+              - generic:
+                - generic: "3."
+                - generic: Dark mode (colorblind-friendly)
+              - generic:
+                - generic: "4."
+                - generic: Light mode (colorblind-friendly)
+              - generic:
+                - generic: "5."
+                - generic: Dark mode (ANSI colors only)
+              - generic:
+                - generic: "6."
+                - generic: Light mode (ANSI colors only)
+              - generic:
+                - generic: ╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌
+              - generic:
+                - generic: "1"
+                - generic: function
+                - generic: greet
+                - generic: ()
+                - generic: "{"
+              - generic:
+                - generic: 2 -
+                - generic: console.log("Hello, World!");
+              - generic:
+                - generic: 2 +
+                - generic: console
+                - generic: .log(
+                - generic: "\"Hello,"
+                - generic: Claude
+                - generic: "!\""
+                - generic: );
+              - generic:
+                - generic: "3"
+                - generic: "}"
+              - generic:
+                - generic: ╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌
+              - generic:
+                - generic: Syntax
+                - generic: "theme:"
+                - generic: GitHub
+                - generic: (ctrl+t
+                - generic: to
+                - generic: disable)
+          - generic [ref=e135]:
+            - textbox "Terminal input" [ref=e136]
+            - generic:
+              - generic:
+                - generic: Connecting to ctbaceo...
+              - generic:
+                - generic: 🔌
+                - generic: Connected to ctbaceo (ctbaceo) — interactive session in /Users/namng/Work/bTodo
+              - generic:
+                - generic: Welcome
+                - generic: to
+                - generic: Claude
+                - generic: Code
+                - generic: v2.1.92
+              - generic:
+                - generic: …………………………………………………………………………………………………………………………………………………………
+              - generic:
+                - generic: ░░░░░░
+              - generic:
+                - generic: ░░░ ░░░░░░░░░░
+              - generic:
+                - generic: ░░░░░░░░░░░░░░░░░░░
+              - generic:
+                - generic: ░░░░
+                - generic: ██
+              - generic:
+                - generic: ░░░░░░░░░░
+                - generic: ██▒▒██
+              - generic:
+                - generic: ▒▒ ██ ▒
+              - generic:
+                - generic: █████████
+                - generic: ▒▒░░▒▒ ▒ ▒▒
+              - generic:
+                - generic: ██▄█████▄██
+                - generic: ▒▒ ▒▒
+              - generic:
+                - generic: █████████
+                - generic: ░ ▒
+              - generic:
+                - generic: …………………
+                - generic: █
+                - generic: █
+                - generic: █
+                - generic: █
+                - generic: ……………………………………………………………………░…………………………▒…………
+              - generic:
+                - generic: Let's get started.
+              - generic:
+                - generic: Choose
+                - generic: the
+                - generic: text
+                - generic: style
+                - generic: that
+                - generic: looks
+                - generic: best
+                - generic: with
+                - generic: your
+                - generic: terminal
+              - generic:
+                - generic: To
+                - generic: change
+                - generic: this
+                - generic: later,
+                - generic: run
+                - generic: /theme
+              - generic:
+                - generic: "1."
+                - generic: Dark mode
+              - generic:
+                - generic: ❯
+                - generic: "2."
+                - generic: Light
+                - generic: mode
+                - generic: ✔
+              - generic:
+                - generic: "3."
+                - generic: Dark mode (colorblind-friendly)
+              - generic:
+                - generic: "4."
+                - generic: Light mode (colorblind-friendly)
+              - generic:
+                - generic: "5."
+                - generic: Dark mode (ANSI colors only)
+              - generic:
+                - generic: "6."
+                - generic: Light mode (ANSI colors only)
+              - generic:
+                - generic: ╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌
+              - generic:
+                - generic: "1"
+                - generic: function
+                - generic: greet
+                - generic: ()
+                - generic: "{"
+              - generic:
+                - generic: 2 -
+                - generic: console.log("Hello, World!");
+              - generic:
+                - generic: 2 +
+                - generic: console
+                - generic: .log(
+                - generic: "\"Hello,"
+                - generic: Claude
+                - generic: "!\""
+                - generic: );
+              - generic:
+                - generic: "3"
+                - generic: "}"
+              - generic:
+                - generic: ╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌
+              - generic:
+                - generic: Syntax
+                - generic: "theme:"
+                - generic: GitHub
+                - generic: (ctrl+t
+                - generic: to
+                - generic: disable)
+  - alert [ref=e121]

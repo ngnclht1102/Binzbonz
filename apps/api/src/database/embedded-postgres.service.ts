@@ -1,6 +1,7 @@
 import { Injectable, Logger, OnApplicationShutdown } from '@nestjs/common';
 import { existsSync, readFileSync, rmSync } from 'fs';
 import { resolve } from 'path';
+import { createConnection } from 'net';
 
 interface EmbeddedPostgresInstance {
   initialise(): Promise<void>;
@@ -10,6 +11,26 @@ interface EmbeddedPostgresInstance {
 
 interface EmbeddedPostgresCtor {
   new (opts: Record<string, unknown>): EmbeddedPostgresInstance;
+}
+
+function isPortReachable(port: number, host = '127.0.0.1', timeoutMs = 2000): Promise<boolean> {
+  return new Promise((resolve) => {
+    const socket = createConnection({ port, host });
+    const timer = setTimeout(() => {
+      socket.destroy();
+      resolve(false);
+    }, timeoutMs);
+    socket.on('connect', () => {
+      clearTimeout(timer);
+      socket.destroy();
+      resolve(true);
+    });
+    socket.on('error', () => {
+      clearTimeout(timer);
+      socket.destroy();
+      resolve(false);
+    });
+  });
 }
 
 @Injectable()
@@ -39,24 +60,31 @@ export class EmbeddedPostgresService implements OnApplicationShutdown {
     const postmasterPidFile = resolve(dataDir, 'postmaster.pid');
     const clusterExists = existsSync(pgVersionFile);
 
-    // Check if already running
-    const runningPid = this.readRunningPid(postmasterPidFile);
+    // Check if already running: PID alive AND port reachable
+    const runningPid = this.readPidFromFile(postmasterPidFile);
     if (runningPid) {
-      this.logger.warn(
-        `Reusing existing embedded Postgres (pid=${runningPid}, port=${configuredPort})`,
-      );
-      const connStr = `postgres://${user}:${password}@127.0.0.1:${configuredPort}/${dbName}`;
-      this.connectionString = connStr;
-      return connStr;
+      const portUp = await isPortReachable(configuredPort);
+      if (portUp) {
+        this.logger.log(
+          `Reusing existing embedded Postgres (pid=${runningPid}, port=${configuredPort})`,
+        );
+        const connStr = `postgres://${user}:${password}@127.0.0.1:${configuredPort}/${dbName}`;
+        this.connectionString = connStr;
+        return connStr;
+      } else {
+        this.logger.warn(
+          `PID ${runningPid} exists but port ${configuredPort} not reachable — stale process, will restart`,
+        );
+        // Kill the stale process
+        try { process.kill(runningPid, 'SIGTERM'); } catch { /* ignore */ }
+      }
     }
 
     // Detect free port
     const detectPort = (await import('detect-port')).default;
     const selectedPort = await detectPort(configuredPort);
     if (selectedPort !== configuredPort) {
-      this.logger.warn(
-        `Port ${configuredPort} busy, using ${selectedPort}`,
-      );
+      this.logger.warn(`Port ${configuredPort} busy, using ${selectedPort}`);
     }
 
     // Load embedded-postgres
@@ -119,17 +147,17 @@ export class EmbeddedPostgresService implements OnApplicationShutdown {
     }
   }
 
-  private readRunningPid(pidFile: string): number | null {
+  private readPidFromFile(pidFile: string): number | null {
     if (!existsSync(pidFile)) return null;
     try {
       const pidLine = readFileSync(pidFile, 'utf8').split('\n')[0]?.trim();
       const pid = Number(pidLine);
       if (!Number.isInteger(pid) || pid <= 0) return null;
       try {
-        process.kill(pid, 0);
+        process.kill(pid, 0); // Check if process exists
         return pid;
       } catch {
-        return null;
+        return null; // Process dead
       }
     } catch {
       return null;

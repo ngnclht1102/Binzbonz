@@ -16,12 +16,17 @@ export class WorkspaceSetupService {
   private readonly baseDir = resolve(homedir(), '.binzbonz', 'projects');
   private readonly binzbonzRoot = resolve(process.cwd(), '..', '..');
 
-  setup(projectName: string, projectId: string): WorkspacePaths {
-    const slug = projectName
-      .toLowerCase()
-      .replace(/[^a-z0-9]+/g, '-')
-      .replace(/^-|-$/g, '');
-    const projectDir = resolve(this.baseDir, `${slug}-${projectId.slice(0, 8)}`);
+  setup(projectName: string, projectId: string, customPath?: string): WorkspacePaths {
+    let projectDir: string;
+    if (customPath) {
+      projectDir = resolve(customPath);
+    } else {
+      const slug = projectName
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, '-')
+        .replace(/^-|-$/g, '');
+      projectDir = resolve(this.baseDir, `${slug}-${projectId.slice(0, 8)}`);
+    }
 
     this.logger.log(`Setting up workspace at ${projectDir}`);
 

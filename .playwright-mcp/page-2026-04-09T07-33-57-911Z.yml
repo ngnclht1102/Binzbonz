@@ -1,0 +1,50 @@
+- generic [active] [ref=e1]:
+  - complementary [ref=e2]:
+    - link "Binzbonz" [ref=e3] [cursor=pointer]:
+      - /url: /projects
+    - navigation [ref=e4]:
+      - link "Projects" [ref=e5] [cursor=pointer]:
+        - /url: /projects
+  - main [ref=e6]:
+    - generic [ref=e7]:
+      - generic [ref=e8]:
+        - heading "Projects" [level=1] [ref=e9]
+        - link "New Project" [ref=e10] [cursor=pointer]:
+          - /url: /projects/new
+      - generic [ref=e11]:
+        - link "NamTodo active todo app 4/9/2026" [ref=e12] [cursor=pointer]:
+          - /url: /projects/906b4a98-ec31-4ab6-a4d4-448abd28eed3
+          - generic [ref=e13]:
+            - heading "NamTodo" [level=2] [ref=e14]
+            - generic [ref=e15]: active
+          - paragraph [ref=e16]: todo app
+          - paragraph [ref=e17]: 4/9/2026
+        - link "Ticket Type Test active Test hierarchy creation 4/8/2026" [ref=e18] [cursor=pointer]:
+          - /url: /projects/7a239ce3-a3f0-487c-84bb-eb1276a03b20
+          - generic [ref=e19]:
+            - heading "Ticket Type Test" [level=2] [ref=e20]
+            - generic [ref=e21]: active
+          - paragraph [ref=e22]: Test hierarchy creation
+          - paragraph [ref=e23]: 4/8/2026
+        - link "UI Task Test analysing Testing task creation from UI 4/8/2026" [ref=e24] [cursor=pointer]:
+          - /url: /projects/e5fced8d-5f43-4525-bf37-d0e40c2c4939
+          - generic [ref=e25]:
+            - heading "UI Task Test" [level=2] [ref=e26]
+            - generic [ref=e27]: analysing
+          - paragraph [ref=e28]: Testing task creation from UI
+          - paragraph [ref=e29]: 4/8/2026
+        - link "Todo active I want to build a todo app with postgres and nestjs. Pleaes analyse and work on that 4/8/2026" [ref=e30] [cursor=pointer]:
+          - /url: /projects/2e712370-7958-420e-bc6a-7ff3ad9a96d7
+          - generic [ref=e31]:
+            - heading "Todo" [level=2] [ref=e32]
+            - generic [ref=e33]: active
+          - paragraph [ref=e34]: I want to build a todo app with postgres and nestjs. Pleaes analyse and work on that
+          - paragraph [ref=e35]: 4/8/2026
+        - link "My Todo App analysing Build a todo app 4/8/2026" [ref=e36] [cursor=pointer]:
+          - /url: /projects/b1b56f16-21c1-41ef-83ef-396cf934bb81
+          - generic [ref=e37]:
+            - heading "My Todo App" [level=2] [ref=e38]
+            - generic [ref=e39]: analysing
+          - paragraph [ref=e40]: Build a todo app
+          - paragraph [ref=e41]: 4/8/2026
+  - alert [ref=e42]

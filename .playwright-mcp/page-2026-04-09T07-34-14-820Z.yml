@@ -1,0 +1,68 @@
+- generic [active] [ref=e1]:
+  - complementary [ref=e2]:
+    - link "Binzbonz" [ref=e3] [cursor=pointer]:
+      - /url: /projects
+    - navigation [ref=e4]:
+      - link "Projects" [ref=e5] [cursor=pointer]:
+        - /url: /projects
+  - main [ref=e6]:
+    - generic [ref=e7]:
+      - generic [ref=e8]:
+        - generic [ref=e9]:
+          - heading "NamTodo" [level=1] [ref=e10]
+          - generic [ref=e11]: active
+        - paragraph [ref=e12]: todo app
+      - generic [ref=e13]:
+        - link "Board" [ref=e14] [cursor=pointer]:
+          - /url: /projects/906b4a98-ec31-4ab6-a4d4-448abd28eed3
+        - link "Tree" [ref=e15] [cursor=pointer]:
+          - /url: /projects/906b4a98-ec31-4ab6-a4d4-448abd28eed3/tree
+        - link "Agents" [ref=e16] [cursor=pointer]:
+          - /url: /projects/906b4a98-ec31-4ab6-a4d4-448abd28eed3/agents
+      - generic [ref=e17]:
+        - heading "Agent Pool" [level=2] [ref=e18]
+        - button "Create Agent" [ref=e19] [cursor=pointer]
+      - generic [ref=e20]:
+        - link "ctbaceo ctbaceo idle" [ref=e21] [cursor=pointer]:
+          - /url: /projects/906b4a98-ec31-4ab6-a4d4-448abd28eed3/agents/59dad6ec-c8dd-4645-83cb-427a625e8f6a
+          - generic [ref=e24]: ctbaceo
+          - generic [ref=e25]:
+            - generic [ref=e26]: ctbaceo
+            - generic [ref=e27]: idle
+        - link "dev-1 developer idle" [ref=e28] [cursor=pointer]:
+          - /url: /projects/906b4a98-ec31-4ab6-a4d4-448abd28eed3/agents/6dbeac25-8971-48df-9b73-9f794ff434ef
+          - generic [ref=e31]: dev-1
+          - generic [ref=e32]:
+            - generic [ref=e33]: developer
+            - generic [ref=e34]: idle
+        - link "dev-2 developer idle" [ref=e35] [cursor=pointer]:
+          - /url: /projects/906b4a98-ec31-4ab6-a4d4-448abd28eed3/agents/29ed57a3-1629-40b7-8666-bba26b47efa7
+          - generic [ref=e38]: dev-2
+          - generic [ref=e39]:
+            - generic [ref=e40]: developer
+            - generic [ref=e41]: idle
+        - link "dev-3 developer idle" [ref=e42] [cursor=pointer]:
+          - /url: /projects/906b4a98-ec31-4ab6-a4d4-448abd28eed3/agents/b66e206c-d380-47ff-977e-3e1dbf5b3316
+          - generic [ref=e45]: dev-3
+          - generic [ref=e46]:
+            - generic [ref=e47]: developer
+            - generic [ref=e48]: idle
+        - link "dev-4 developer idle" [ref=e49] [cursor=pointer]:
+          - /url: /projects/906b4a98-ec31-4ab6-a4d4-448abd28eed3/agents/a36797d0-c9a9-4aeb-a564-d384c659e9c8
+          - generic [ref=e52]: dev-4
+          - generic [ref=e53]:
+            - generic [ref=e54]: developer
+            - generic [ref=e55]: idle
+        - link "dev-5 developer idle" [ref=e56] [cursor=pointer]:
+          - /url: /projects/906b4a98-ec31-4ab6-a4d4-448abd28eed3/agents/d7c405b9-85b7-4502-8c6f-256dd1cbf657
+          - generic [ref=e59]: dev-5
+          - generic [ref=e60]:
+            - generic [ref=e61]: developer
+            - generic [ref=e62]: idle
+        - link "dev-6 developer idle" [ref=e63] [cursor=pointer]:
+          - /url: /projects/906b4a98-ec31-4ab6-a4d4-448abd28eed3/agents/517e3ac6-7f84-4045-a916-f4da7ad03555
+          - generic [ref=e66]: dev-6
+          - generic [ref=e67]:
+            - generic [ref=e68]: developer
+            - generic [ref=e69]: idle
+  - alert [ref=e70]

@@ -36,17 +36,21 @@ export class ProjectsService {
   }
 
   async create(dto: CreateProjectDto) {
-    // Save first to get the ID
-    const project = await this.repo.save(this.repo.create(dto));
+    const customPath = dto.repo_path;
+    // Clear repo_path so we always run setup (even with custom path)
+    const createData = { ...dto };
+    delete createData.repo_path;
+    delete createData.worktree_path;
+    delete createData.claude_md_path;
 
-    // Set up workspace on disk if no repo_path provided
-    if (!project.repo_path) {
-      const paths = this.workspaceSetup.setup(project.name, project.id);
-      project.repo_path = paths.repo_path;
-      project.worktree_path = paths.worktree_path;
-      project.claude_md_path = paths.claude_md_path;
-      await this.repo.save(project);
-    }
+    const project = await this.repo.save(this.repo.create(createData));
+
+    // Set up workspace on disk
+    const paths = this.workspaceSetup.setup(project.name, project.id, customPath);
+    project.repo_path = paths.repo_path;
+    project.worktree_path = paths.worktree_path;
+    project.claude_md_path = paths.claude_md_path;
+    await this.repo.save(project);
 
     return project;
   }

@@ -25,6 +25,7 @@ export class EventsGateway implements OnModuleInit, OnModuleDestroy {
 
     this.client.on('notification', (msg) => {
       if (msg.channel && msg.payload) {
+        this.logger.debug(`pg_notify received: channel=${msg.channel} payload=${msg.payload.slice(0, 100)}`);
         this.notifications$.next({
           channel: msg.channel,
           payload: msg.payload,

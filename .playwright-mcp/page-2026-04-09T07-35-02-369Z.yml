@@ -1,0 +1,138 @@
+- generic [ref=e1]:
+  - complementary [ref=e2]:
+    - link "Binzbonz" [ref=e3] [cursor=pointer]:
+      - /url: /projects
+    - navigation [ref=e4]:
+      - link "Projects" [ref=e5] [cursor=pointer]:
+        - /url: /projects
+  - main [ref=e6]:
+    - generic [ref=e71]:
+      - button "← Back to agents" [ref=e72] [cursor=pointer]
+      - generic [ref=e73]:
+        - generic [ref=e74]:
+          - generic [ref=e75]:
+            - heading "ctbaceo" [level=1] [ref=e77]
+            - generic [ref=e78]: ctbaceo
+            - generic [ref=e79]: idle
+          - button ">_ Terminal" [active] [ref=e80] [cursor=pointer]:
+            - generic [ref=e81]: ">_"
+            - text: Terminal
+        - generic [ref=e82]:
+          - generic [ref=e83]:
+            - paragraph [ref=e84]: Type
+            - paragraph [ref=e85]: agent
+          - generic [ref=e86]:
+            - paragraph [ref=e87]: Last Active
+            - paragraph [ref=e88]: Never
+          - generic [ref=e89]:
+            - paragraph [ref=e90]: Session
+            - paragraph [ref=e91]: ac486cd1-3ed...
+          - generic [ref=e92]:
+            - paragraph [ref=e93]: Tokens
+            - paragraph [ref=e94]: "11"
+      - generic [ref=e95]:
+        - heading "History (11)" [level=2] [ref=e96]
+        - generic [ref=e97]:
+          - generic [ref=e98]:
+            - generic [ref=e99]:
+              - generic [ref=e100]: done
+              - generic [ref=e101]:
+                - paragraph [ref=e102]:
+                  - text: assignment
+                  - generic [ref=e103]: "task: 7b7081fb"
+                - paragraph [ref=e104]: NamTodo
+            - paragraph [ref=e105]: 4/9/2026, 9:19:31 AM
+          - generic [ref=e106]:
+            - generic [ref=e107]:
+              - generic [ref=e108]: done
+              - generic [ref=e109]:
+                - paragraph [ref=e110]:
+                  - text: assignment
+                  - generic [ref=e111]: "task: 6399b278"
+                - paragraph [ref=e112]: NamTodo
+            - paragraph [ref=e113]: 4/9/2026, 8:43:28 AM
+          - generic [ref=e114]:
+            - generic [ref=e115]:
+              - generic [ref=e116]: done
+              - generic [ref=e117]:
+                - paragraph [ref=e118]:
+                  - text: mention
+                  - generic [ref=e119]: "task: 52ac8260"
+                - paragraph [ref=e120]: NamTodo
+            - paragraph [ref=e121]: 4/9/2026, 7:55:49 AM
+          - generic [ref=e122]:
+            - generic [ref=e123]:
+              - generic [ref=e124]: done
+              - generic [ref=e125]:
+                - paragraph [ref=e126]:
+                  - text: assignment
+                  - generic [ref=e127]: "task: 52ac8260"
+                - paragraph [ref=e128]: NamTodo
+            - paragraph [ref=e129]: 4/9/2026, 6:57:00 AM
+          - generic [ref=e130]:
+            - generic [ref=e131]:
+              - generic [ref=e132]: done
+              - generic [ref=e133]:
+                - paragraph [ref=e134]:
+                  - text: mention
+                  - generic [ref=e135]: "task: e566e320"
+                - paragraph [ref=e136]: Todo
+            - paragraph [ref=e137]: 4/8/2026, 9:25:40 PM
+          - generic [ref=e138]:
+            - generic [ref=e139]:
+              - generic [ref=e140]: skipped
+              - generic [ref=e141]:
+                - paragraph [ref=e142]:
+                  - text: assignment
+                  - generic [ref=e143]: "task: e566e320"
+                - paragraph [ref=e144]: Todo
+            - paragraph [ref=e145]: 4/8/2026, 9:23:11 PM
+          - generic [ref=e146]:
+            - generic [ref=e147]:
+              - generic [ref=e148]: done
+              - generic [ref=e149]:
+                - paragraph [ref=e150]:
+                  - text: assignment
+                  - generic [ref=e151]: "task: 37ca0b92"
+                - paragraph [ref=e152]: Todo
+            - paragraph [ref=e153]: 4/8/2026, 9:20:01 PM
+          - generic [ref=e154]:
+            - generic [ref=e155]:
+              - generic [ref=e156]: done
+              - generic [ref=e157]:
+                - paragraph [ref=e158]:
+                  - text: mention
+                  - generic [ref=e159]: "task: 8cf0fb6d"
+                - paragraph [ref=e160]: Todo
+            - paragraph [ref=e161]: 4/8/2026, 9:04:13 PM
+          - generic [ref=e162]:
+            - generic [ref=e163]:
+              - generic [ref=e164]: done
+              - generic [ref=e165]:
+                - paragraph [ref=e166]:
+                  - text: mention
+                  - generic [ref=e167]: "task: 8cf0fb6d"
+                - paragraph [ref=e168]: Todo
+            - paragraph [ref=e169]: 4/8/2026, 9:01:03 PM
+          - generic [ref=e170]:
+            - generic [ref=e171]:
+              - generic [ref=e172]: done
+              - generic [ref=e173]:
+                - paragraph [ref=e174]:
+                  - text: mention
+                  - generic [ref=e175]: "task: 8cf0fb6d"
+                - paragraph [ref=e176]: Todo
+            - paragraph [ref=e177]: 4/8/2026, 8:57:51 PM
+          - generic [ref=e178]:
+            - generic [ref=e179]:
+              - generic [ref=e180]: done
+              - generic [ref=e181]:
+                - paragraph [ref=e182]: mention
+                - paragraph [ref=e183]: Todo
+            - paragraph [ref=e184]: 4/8/2026, 8:52:25 PM
+      - generic [ref=e186]:
+        - generic [ref=e187]:
+          - generic [ref=e188]: "Terminal: ctbaceo"
+          - generic [ref=e189]: connecting
+        - button "Close (Esc)" [ref=e190] [cursor=pointer]
+  - alert [ref=e70]

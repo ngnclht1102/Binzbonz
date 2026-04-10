@@ -117,9 +117,10 @@ export default function AgentPoolPage() {
       ) : (
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
           {agents.map((agent) => (
-            <div
+            <Link
               key={agent.id}
-              className="bg-gray-900 border border-gray-800 rounded-lg p-4"
+              href={`/projects/${id}/agents/${agent.id}`}
+              className="block bg-gray-900 border border-gray-800 rounded-lg p-4 hover:border-gray-600 transition-colors"
             >
               <div className="flex items-center gap-2 mb-2">
                 <span className={`w-2 h-2 rounded-full ${STATUS_DOT[agent.status] ?? "bg-gray-400"}`} />
@@ -142,7 +143,7 @@ export default function AgentPoolPage() {
                   Last active: {new Date(agent.last_active_at).toLocaleString()}
                 </p>
               )}
-            </div>
+            </Link>
           ))}
         </div>
       )}

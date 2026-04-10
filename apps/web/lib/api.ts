@@ -22,6 +22,8 @@ export interface Actor {
   type: string;
   role: string | null;
   status: string;
+  session_id: string | null;
+  last_token_count: number;
   last_active_at: string | null;
   created_at: string;
 }
@@ -65,16 +67,52 @@ export const getActors = (params?: Record<string, string>) => {
   return request<Actor[]>(`/actors${qs}`);
 };
 
+export const getActor = (id: string) => request<Actor>(`/actors/${id}`);
+
 export const createActor = (data: { name: string; type: string; role?: string }) =>
   request<Actor>("/actors", { method: "POST", body: JSON.stringify(data) });
+
+// Wake Events
+export interface WakeEvent {
+  id: string;
+  agent_id: string;
+  project_id: string;
+  task_id: string | null;
+  triggered_by: string;
+  comment_id: string | null;
+  status: string;
+  created_at: string;
+  agent?: Actor;
+  project?: { id: string; name: string };
+}
+
+export const getWakeEvents = (params?: Record<string, string>) => {
+  const qs = params ? "?" + new URLSearchParams(params).toString() : "";
+  return request<WakeEvent[]>(`/wake-events${qs}`);
+};
 
 // Projects
 export const getProjects = () => request<Project[]>("/projects");
 export const getProject = (id: string) => request<Project>(`/projects/${id}`);
-export const createProject = (data: { name: string; brief: string }) =>
+export const createProject = (data: { name: string; brief: string; repo_path?: string }) =>
   request<Project>("/projects", { method: "POST", body: JSON.stringify(data) });
 export const updateProject = (id: string, data: Partial<Project>) =>
   request<Project>(`/projects/${id}`, { method: "PATCH", body: JSON.stringify(data) });
+
+// Filesystem (directory browser)
+export interface DirEntry { name: string; path: string; is_directory: boolean; }
+export interface BrowseResponse { cwd: string; parent: string | null; entries: DirEntry[]; }
+
+export const browseDirectory = (path?: string) => {
+  const qs = path ? `?path=${encodeURIComponent(path)}` : "";
+  return request<BrowseResponse>(`/filesystem/browse${qs}`);
+};
+export const getHomeDir = () => request<{ path: string }>("/filesystem/home");
+export const createDirectory = (parent: string, name: string) =>
+  request<{ path: string }>("/filesystem/mkdir", {
+    method: "POST",
+    body: JSON.stringify({ parent, name }),
+  });
 
 // Tasks
 export const getProjectTasks = (projectId: string) =>
@@ -125,30 +163,36 @@ export const createTask = (featureId: string, data: { title: string; description
 export const createSubtask = (parentId: string, data: { title: string; description?: string }) =>
   request<Task>(`/tasks/${parentId}/subtasks`, { method: "POST", body: JSON.stringify(data) });
 
-// Ensure a default hierarchy exists, return the first feature ID
-export async function ensureDefaultHierarchy(projectId: string): Promise<string> {
+// Auto-create hierarchy up to each level, return the parent ID needed
+
+export async function ensureMvp(projectId: string): Promise<string> {
   let mvps = await getProjectMvps(projectId);
-  if (mvps.length === 0) {
-    const mvp = await createMvp(projectId, { title: "MVP 1" });
-    mvps = [mvp];
-  }
-  let sprints = await getMvpSprints(mvps[0].id);
-  if (sprints.length === 0) {
-    const sprint = await createSprint(mvps[0].id, { title: "Sprint 1" });
-    sprints = [sprint];
-  }
-  let epics = await getSprintEpics(sprints[0].id);
-  if (epics.length === 0) {
-    const epic = await createEpic(sprints[0].id, { title: "General" });
-    epics = [epic];
-  }
-  let features = await getEpicFeatures(epics[0].id);
-  if (features.length === 0) {
-    const feature = await createFeature(epics[0].id, { title: "General" });
-    features = [feature];
-  }
+  if (mvps.length === 0) mvps = [await createMvp(projectId, { title: "MVP 1" })];
+  return mvps[0].id;
+}
+
+export async function ensureSprint(projectId: string): Promise<string> {
+  const mvpId = await ensureMvp(projectId);
+  let sprints = await getMvpSprints(mvpId);
+  if (sprints.length === 0) sprints = [await createSprint(mvpId, { title: "Sprint 1" })];
+  return sprints[0].id;
+}
+
+export async function ensureEpic(projectId: string): Promise<string> {
+  const sprintId = await ensureSprint(projectId);
+  let epics = await getSprintEpics(sprintId);
+  if (epics.length === 0) epics = [await createEpic(sprintId, { title: "General" })];
+  return epics[0].id;
+}
+
+export async function ensureFeature(projectId: string): Promise<string> {
+  const epicId = await ensureEpic(projectId);
+  let features = await getEpicFeatures(epicId);
+  if (features.length === 0) features = [await createFeature(epicId, { title: "General" })];
   return features[0].id;
 }
+
+export const ensureDefaultHierarchy = ensureFeature;
 
 // SSE
 export const API_SSE_URL = `${API_URL}/events/stream`;

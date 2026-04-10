@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Comment } from './comment.entity.js';
@@ -9,6 +9,8 @@ import { Task } from '../tasks/task.entity.js';
 
 @Injectable()
 export class CommentsService {
+  private readonly logger = new Logger(CommentsService.name);
+
   constructor(
     @InjectRepository(Comment)
     private readonly commentRepo: Repository<Comment>,
@@ -28,6 +30,7 @@ export class CommentsService {
   }
 
   async createForTask(taskId: string, dto: CreateCommentDto) {
+    this.logger.log(`Creating comment on task ${taskId.slice(0, 8)} by actor ${dto.actor_id.slice(0, 8)} (${dto.comment_type ?? 'update'})`);
     const comment = await this.commentRepo.save(
       this.commentRepo.create({
         task_id: taskId,
@@ -36,6 +39,7 @@ export class CommentsService {
         comment_type: dto.comment_type ?? 'update',
       }),
     );
+    this.logger.log(`Comment created: ${comment.id.slice(0, 8)} on task ${taskId.slice(0, 8)}`);
 
     // Resolve project_id through task → feature → epic → sprint → mvp
     const task = await this.taskRepo
@@ -55,6 +59,8 @@ export class CommentsService {
         task.project_id,
         taskId,
       );
+    } else {
+      this.logger.warn(`Could not resolve project_id for task ${taskId.slice(0, 8)} — skipping mention parsing`);
     }
 
     return comment;
@@ -69,6 +75,7 @@ export class CommentsService {
   }
 
   async createForProject(projectId: string, dto: CreateCommentDto) {
+    this.logger.log(`Creating project comment on project ${projectId.slice(0, 8)} by actor ${dto.actor_id.slice(0, 8)}`);
     const comment = await this.projectCommentRepo.save(
       this.projectCommentRepo.create({
         project_id: projectId,
@@ -77,6 +84,7 @@ export class CommentsService {
         comment_type: dto.comment_type ?? 'update',
       }),
     );
+    this.logger.log(`Project comment created: ${comment.id.slice(0, 8)}`);
 
     await this.mentionParser.parseMentions(dto.body, comment.id, projectId);
     return comment;
