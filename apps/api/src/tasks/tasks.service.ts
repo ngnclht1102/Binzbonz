@@ -11,14 +11,19 @@ import { WakeEvent } from '../wake-events/wake-event.entity.js';
 import { CreateTaskDto } from './dto/create-task.dto.js';
 import { UpdateTaskDto } from './dto/update-task.dto.js';
 
+// Task state machine. Liberal on purpose: agents do an entire task in one
+// wake event, so forcing them through intermediate `in_progress` updates
+// is noise. Any "active" state (assigned / in_progress / blocked /
+// review_request) can move directly to any other active state, or to
+// done / cancelled.
 const VALID_TRANSITIONS: Record<string, string[]> = {
-  backlog: ['assigned', 'cancelled'],
-  assigned: ['in_progress', 'backlog', 'cancelled'],
-  in_progress: ['blocked', 'review_request', 'done', 'cancelled'],
-  blocked: ['in_progress', 'cancelled'],
-  review_request: ['in_progress', 'done', 'cancelled'],
-  done: ['backlog'],
-  cancelled: ['backlog'],
+  backlog: ['assigned', 'in_progress', 'cancelled'],
+  assigned: ['in_progress', 'blocked', 'review_request', 'done', 'backlog', 'cancelled'],
+  in_progress: ['assigned', 'blocked', 'review_request', 'done', 'cancelled'],
+  blocked: ['assigned', 'in_progress', 'review_request', 'done', 'cancelled'],
+  review_request: ['assigned', 'in_progress', 'blocked', 'done', 'cancelled'],
+  done: ['backlog', 'assigned', 'in_progress'],
+  cancelled: ['backlog', 'assigned', 'in_progress'],
 };
 
 @Injectable()
@@ -53,6 +58,15 @@ export class TasksService {
       .orderBy('task.priority', 'DESC')
       .addOrderBy('task.created_at', 'ASC')
       .getMany();
+  }
+
+  /** All tasks assigned to a given actor across every project. */
+  findByAssignee(actorId: string) {
+    return this.repo.find({
+      where: { assigned_agent_id: actorId },
+      relations: ['assigned_agent'],
+      order: { priority: 'DESC', created_at: 'ASC' },
+    });
   }
 
   async findOne(id: string) {
@@ -98,6 +112,8 @@ export class TasksService {
       dto.assigned_agent_id &&
       dto.assigned_agent_id !== task.assigned_agent_id;
 
+    const isCancelling = dto.status === 'cancelled' && task.status !== 'cancelled';
+
     // Auto-assign sets status
     if (dto.assigned_agent_id && !dto.status && task.status === 'backlog') {
       dto.status = 'assigned';
@@ -122,6 +138,24 @@ export class TasksService {
 
     Object.assign(task, dto);
     const saved = await this.repo.save(task);
+
+    // When a task is cancelled, cancel its outstanding wake events too.
+    // Otherwise queued/in-flight wakes will keep firing for a task the user
+    // explicitly killed. Marks pending/processing wakes as 'skipped'.
+    if (isCancelling) {
+      const result = await this.wakeEventRepo
+        .createQueryBuilder()
+        .update()
+        .set({ status: 'skipped' })
+        .where('task_id = :taskId', { taskId: id })
+        .andWhere('status IN (:...statuses)', { statuses: ['pending', 'processing'] })
+        .execute();
+      if (result.affected && result.affected > 0) {
+        this.logger.log(
+          `Task ${id.slice(0, 8)}: cancelled ${result.affected} pending/processing wake events`,
+        );
+      }
+    }
 
     // Create wake event when agent is assigned (dedup: skip if one already pending/processing)
     if (isNewAssignment && dto.assigned_agent_id) {

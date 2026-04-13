@@ -13,6 +13,7 @@ import { SeedModule } from './seed/seed.module.js';
 import { EventsModule } from './events/events.module.js';
 import { TerminalModule } from './terminal/terminal.module.js';
 import { FilesystemModule } from './filesystem/filesystem.module.js';
+import { HeartbeatModule } from './heartbeat/heartbeat.module.js';
 
 @Module({
   imports: [
@@ -29,6 +30,7 @@ import { FilesystemModule } from './filesystem/filesystem.module.js';
     EventsModule,
     TerminalModule,
     FilesystemModule,
+    HeartbeatModule,
   ],
   controllers: [AppController],
 })

@@ -69,8 +69,10 @@ POST   /tasks/:parentId/subtasks        # Create subtask {"title","description"}
 PATCH  /tasks/:id                       # Update task {"status","assigned_agent_id","title",...}
 DELETE /tasks/:id                       # Delete task
 ```
-Task statuses: `backlog→assigned→in_progress→blocked|review_request|done|cancelled`
+Task statuses: `backlog | assigned | in_progress | blocked | review_request | done | cancelled`
 Assigning `assigned_agent_id` auto-sets status to `assigned` and wakes the agent.
+
+**Status transitions are LIBERAL** — you can move directly between any active states (assigned/in_progress/blocked/review_request) and to done/cancelled. You do NOT need to step through `in_progress` first. When you finish a task, just `PATCH /tasks/:id { "status": "done" }` directly from whatever state it was in.
 
 ### Comments
 ```

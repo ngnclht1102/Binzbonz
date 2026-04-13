@@ -24,10 +24,24 @@ export interface Actor {
   id: string;
   name: string;
   type: string;
-  role: string | null;
+  role: string | null; // developer | ctbaceo | openapidev | openapicoor | null
   status: string;
   created_at: string;
+  // OpenAI provider config (only set for openapidev / openapicoor).
+  // The api_key is always returned as `<redacted>` after creation.
+  provider_base_url?: string | null;
+  provider_model?: string | null;
+  provider_api_key?: string | null;
+  // Heartbeat config
+  heartbeat_enabled?: boolean;
+  heartbeat_interval_seconds?: number;
+  heartbeat_last_at?: string | null;
 }
+
+export type AgentRole = 'developer' | 'ctbaceo' | 'openapidev' | 'openapicoor';
+export const OPENAPI_ROLES: Set<string> = new Set(['openapidev', 'openapicoor']);
+export const isOpenAIRole = (role: string | null): boolean =>
+  !!role && OPENAPI_ROLES.has(role);
 
 /** Per-project session row, joined with project info when listed for an agent. */
 export interface AgentProjectSession {
@@ -39,8 +53,34 @@ export interface AgentProjectSession {
   last_active_at: string | null;
   created_at: string;
   updated_at: string;
+  /** Number of messages in the OpenAI message_history (server-side computed). */
+  message_count?: number;
   project?: Project;
   agent?: Actor;
+}
+
+/** OpenAI chat message shape — what /messages returns. */
+export interface OpenAIMessage {
+  role: 'system' | 'user' | 'assistant' | 'tool';
+  content: string | null;
+  tool_calls?: Array<{
+    id: string;
+    type: 'function';
+    function: { name: string; arguments: string };
+  }>;
+  tool_call_id?: string;
+  /** ISO timestamp added by the runner / chat endpoint when persisting.
+   *  Older messages may not have this field. */
+  _ts?: string;
+}
+
+export interface SessionMessages {
+  id: string;
+  agent_id: string;
+  project_id: string;
+  messages: OpenAIMessage[];
+  last_token_count: number;
+  last_active_at: string | null;
 }
 
 export interface Project {
@@ -84,8 +124,35 @@ export const getActors = (params?: Record<string, string>) => {
 
 export const getActor = (id: string) => request<Actor>(`/actors/${id}`);
 
-export const createActor = (data: { name: string; type: string; role?: string }) =>
-  request<Actor>("/actors", { method: "POST", body: JSON.stringify(data) });
+export const createActor = (data: {
+  name: string;
+  type: string;
+  role?: string;
+  provider_base_url?: string;
+  provider_model?: string;
+  provider_api_key?: string;
+}) => request<Actor>("/actors", { method: "POST", body: JSON.stringify(data) });
+
+// Heartbeat
+export const setActorHeartbeat = (
+  id: string,
+  data: { enabled: boolean; interval_seconds?: number },
+) =>
+  request<Actor>(`/actors/${id}/heartbeat`, {
+    method: "PATCH",
+    body: JSON.stringify(data),
+  });
+
+// Provider config (OpenAI agents only)
+export const updateProviderConfig = (
+  id: string,
+  data: { base_url?: string; model?: string; api_key?: string },
+  verify = false,
+) =>
+  request<Actor>(
+    `/actors/${id}/provider-config${verify ? "?verify=true" : ""}`,
+    { method: "PATCH", body: JSON.stringify(data) },
+  );
 
 // Agent Project Sessions
 export const getAgentProjectSessions = (agentId: string) =>
@@ -102,6 +169,29 @@ export const getAgentProjectSession = (agentId: string, projectId: string) =>
   );
 export const deleteAgentProjectSession = (id: string) =>
   request<{ deleted: boolean }>(`/agent-project-sessions/${id}`, { method: "DELETE" });
+
+/**
+ * Find or create the (agent, project) session row. The PATCH endpoint
+ * runs upsert via findOrCreate, so passing only the keys creates an empty
+ * row when none exists. Used by the chat modal flow when the user wants to
+ * open a conversation before any wake event has been processed.
+ */
+export const ensureAgentProjectSession = (agentId: string, projectId: string) =>
+  request<AgentProjectSession>(`/agent-project-sessions`, {
+    method: "PATCH",
+    body: JSON.stringify({ agent_id: agentId, project_id: projectId }),
+  });
+
+/** Full message_history for one (agent, project) session. */
+export const getSessionMessages = (id: string) =>
+  request<SessionMessages>(`/agent-project-sessions/${id}/messages`);
+
+/** Send a chat message to an OpenAI agent. */
+export const sendChatMessage = (sessionId: string, content: string) =>
+  request<{ accepted: boolean; wake_event_id: string }>(
+    `/agent-project-sessions/${sessionId}/chat`,
+    { method: "POST", body: JSON.stringify({ content }) },
+  );
 
 // Wake Events
 export interface WakeEvent {

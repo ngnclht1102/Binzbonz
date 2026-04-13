@@ -8,6 +8,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { rmSync, existsSync } from 'fs';
 import { Project } from './project.entity.js';
+import { AgentProjectSession } from '../agent-project-sessions/agent-project-session.entity.js';
 import { CreateProjectDto } from './dto/create-project.dto.js';
 import { UpdateProjectDto } from './dto/update-project.dto.js';
 import { WorkspaceSetupService } from './workspace-setup.service.js';
@@ -26,6 +27,8 @@ export class ProjectsService {
   constructor(
     @InjectRepository(Project)
     private readonly repo: Repository<Project>,
+    @InjectRepository(AgentProjectSession)
+    private readonly sessionRepo: Repository<AgentProjectSession>,
     private readonly workspaceSetup: WorkspaceSetupService,
   ) {}
 
@@ -77,7 +80,19 @@ export class ProjectsService {
     const project = await this.findOne(id);
     const repoPath = project.repo_path;
 
-    // Delete DB row first — this cascades to mvps/sprints/epics/features/tasks/
+    // Explicitly drop agent_project_session rows for this project FIRST,
+    // including the OpenAI message_history jsonb. The entity FK already has
+    // ON DELETE CASCADE, but TypeORM `synchronize: true` is unreliable about
+    // installing FK constraints on existing tables — this explicit delete
+    // makes the cleanup deterministic regardless of schema state.
+    const sessionDelete = await this.sessionRepo.delete({ project_id: id });
+    if (sessionDelete.affected && sessionDelete.affected > 0) {
+      this.logger.log(
+        `Deleted ${sessionDelete.affected} agent_project_session rows (incl. OpenAI message history) for project ${id.slice(0, 8)}`,
+      );
+    }
+
+    // Delete DB row — this cascades to mvps/sprints/epics/features/tasks/
     // comments/wake_events/memory_files via ON DELETE CASCADE.
     await this.repo.remove(project);
 

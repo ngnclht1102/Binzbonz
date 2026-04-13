@@ -6,6 +6,7 @@ import { useProjectsStore } from "@/lib/stores/projects-store";
 import { useTasksStore } from "@/lib/stores/tasks-store";
 import { useEventsStore } from "@/lib/stores/events-store";
 import { useActorsStore } from "@/lib/stores/actors-store";
+import MentionInput from "@/components/mention-input";
 import {
   getProjectMvps,
   getMvpSprints,
@@ -508,14 +509,14 @@ function TaskSidebar({
       </div>
 
       <div className="p-4 border-t border-gray-800 shrink-0 flex gap-2">
-        <input
-          type="text"
+        <MentionInput
           value={commentBody}
-          onChange={(e) => setCommentBody(e.target.value)}
+          onChange={setCommentBody}
+          actors={agents}
           placeholder="Write a comment..."
-          className="flex-1 px-3 py-1.5 bg-gray-800 border border-gray-700 rounded text-sm focus:outline-none focus:border-blue-500"
-          onKeyDown={(e) => {
-            if (e.key === "Enter" && commentBody.trim()) {
+          className="w-full px-3 py-1.5 bg-gray-800 border border-gray-700 rounded text-sm focus:outline-none focus:border-blue-500"
+          onSubmit={() => {
+            if (commentBody.trim()) {
               onPostComment(commentBody.trim());
               setCommentBody("");
             }

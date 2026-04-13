@@ -17,13 +17,36 @@ export class Actor {
   type!: string; // human | agent
 
   @Column({ type: 'text', nullable: true })
-  role!: string | null; // developer | ctbaceo | null
+  role!: string | null; // developer | ctbaceo | openapidev | openapicoor | null
 
   @Column({ type: 'text', nullable: true })
   avatar_url!: string | null;
 
   @Column({ type: 'text', default: 'idle' })
   status!: string; // idle | working | compacting
+
+  // Provider config — only set for openapidev / openapicoor roles. The
+  // api_key is stored raw and MUST be stripped from any response or log
+  // line via redactActor() before leaving the server.
+  @Column({ type: 'text', nullable: true })
+  provider_base_url!: string | null;
+
+  @Column({ type: 'text', nullable: true })
+  provider_model!: string | null;
+
+  @Column({ type: 'text', nullable: true })
+  provider_api_key!: string | null;
+
+  // Heartbeat config — at most ONE actor in the system can have heartbeat
+  // enabled at a time (enforced in the service layer).
+  @Column({ type: 'boolean', default: false })
+  heartbeat_enabled!: boolean;
+
+  @Column({ type: 'int', default: 300 })
+  heartbeat_interval_seconds!: number;
+
+  @Column({ type: 'timestamptz', nullable: true })
+  heartbeat_last_at!: Date | null;
 
   @CreateDateColumn({ type: 'timestamptz' })
   created_at!: Date;

@@ -1,6 +1,7 @@
 import { NestFactory } from '@nestjs/core';
 import { ValidationPipe } from '@nestjs/common';
 import { WsAdapter } from '@nestjs/platform-ws';
+import * as bodyParser from 'body-parser';
 import { AppModule } from './app.module.js';
 import { LoggingInterceptor } from './logging.interceptor.js';
 import { DualLogger } from './dual-logger.js';
@@ -13,6 +14,13 @@ async function bootstrap() {
   });
   app.enableCors();
   app.useWebSocketAdapter(new WsAdapter(app));
+
+  // Bump body parser limit. Default is ~100KB which is too small for the
+  // OpenAI agent message_history upserts — 60+ messages with verbose tool
+  // results easily exceed the default and start returning 413.
+  app.use(bodyParser.json({ limit: '20mb' }));
+  app.use(bodyParser.urlencoded({ limit: '20mb', extended: true }));
+
   app.useGlobalPipes(
     new ValidationPipe({ whitelist: true, transform: true }),
   );

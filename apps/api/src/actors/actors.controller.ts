@@ -11,6 +11,8 @@ import {
 import { ActorsService } from './actors.service.js';
 import { CreateActorDto } from './dto/create-actor.dto.js';
 import { UpdateActorDto } from './dto/update-actor.dto.js';
+import { HeartbeatDto } from './dto/heartbeat.dto.js';
+import { ProviderConfigDto } from './dto/provider-config.dto.js';
 
 @Controller('actors')
 export class ActorsController {
@@ -26,7 +28,17 @@ export class ActorsController {
   }
 
   @Get(':id')
-  findOne(@Param('id') id: string) {
+  findOne(
+    @Param('id') id: string,
+    @Query('include_secrets') includeSecrets?: string,
+  ) {
+    // include_secrets=true returns the unredacted row including provider_api_key.
+    // Reserved for trusted server-side callers (the agent runner). The
+    // frontend never uses this. There's no auth layer in v1, so this is
+    // localhost-only.
+    if (includeSecrets === 'true') {
+      return this.service.findOneRaw(id);
+    }
     return this.service.findOne(id);
   }
 
@@ -43,5 +55,23 @@ export class ActorsController {
   @Delete(':id')
   remove(@Param('id') id: string) {
     return this.service.remove(id);
+  }
+
+  // ─── Heartbeat ─────────────────────────────────────────────────────────
+
+  @Patch(':id/heartbeat')
+  setHeartbeat(@Param('id') id: string, @Body() dto: HeartbeatDto) {
+    return this.service.setHeartbeat(id, dto);
+  }
+
+  // ─── Provider config (OpenAI agents only) ──────────────────────────────
+
+  @Patch(':id/provider-config')
+  updateProviderConfig(
+    @Param('id') id: string,
+    @Body() dto: ProviderConfigDto,
+    @Query('verify') verify?: string,
+  ) {
+    return this.service.updateProviderConfig(id, dto, verify === 'true');
   }
 }

@@ -35,6 +35,14 @@ export const getActors = () =>
 export const getActor = (id: string) =>
   request<Actor>(`/actors/${id}`);
 
+/**
+ * Get the actor with the unredacted provider_api_key. Only used by the
+ * runner for OpenAI agents — never log this or pass it through anywhere
+ * other than the spawner.
+ */
+export const getActorWithSecrets = (id: string) =>
+  request<Actor>(`/actors/${id}?include_secrets=true`);
+
 export const getProject = (id: string) =>
   request<{ id: string; name: string; brief: string | null; status: string; repo_path: string | null }>(`/projects/${id}`);
 
@@ -69,7 +77,7 @@ export const getChangedMemoryFiles = (projectId: string, since: string) =>
 
 /**
  * Look up the per-project session row for (agent, project). Returns null if
- * the row doesn't exist yet.
+ * the row doesn't exist yet. Slim — does not include message_history.
  */
 export const getAgentProjectSession = (agentId: string, projectId: string) =>
   request<AgentProjectSession | null>(
@@ -77,15 +85,75 @@ export const getAgentProjectSession = (agentId: string, projectId: string) =>
   );
 
 /**
+ * Look up the per-project session row INCLUDING message_history. Used by
+ * the OpenAI spawner before each call (Claude doesn't need this).
+ */
+export const getAgentProjectSessionWithMessages = (agentId: string, projectId: string) =>
+  request<AgentProjectSession | null>(
+    `/agent-project-sessions?agent_id=${agentId}&project_id=${projectId}&include_messages=true`,
+  );
+
+/**
  * Upsert the per-project session row. The runner calls this after every spawn
- * to write back the new session_id and token count and bump last_active_at.
+ * to write back the new session_id / message_history / token count and bump
+ * last_active_at.
  */
 export const upsertAgentProjectSession = (
   agentId: string,
   projectId: string,
-  data: { session_id?: string | null; last_token_count?: number },
+  data: {
+    session_id?: string | null;
+    last_token_count?: number;
+    message_history?: unknown[];
+  },
 ) =>
   request<AgentProjectSession>(`/agent-project-sessions`, {
     method: 'PATCH',
     body: JSON.stringify({ agent_id: agentId, project_id: projectId, ...data }),
   });
+
+// ─── Tools API surface (used by OpenAI tool dispatcher) ─────────────────
+
+export const updateTask = (id: string, data: Record<string, unknown>) =>
+  request<unknown>(`/tasks/${id}`, {
+    method: 'PATCH',
+    body: JSON.stringify(data),
+  });
+
+export const getProjectTasks = (projectId: string) =>
+  request<unknown[]>(`/projects/${projectId}/tasks`);
+
+export const getActorTasks = (actorId: string) =>
+  request<unknown[]>(`/actors/${actorId}/tasks`);
+
+export const listIdleDevelopers = () =>
+  request<Actor[]>(`/actors?type=agent&role=developer&status=idle`);
+
+/** Post a comment on the project itself (not on any task). Used by the
+ *  coordinator when a project has no tasks and it needs to wake ctbaceo
+ *  to break down the brief. Mentions in the body will still trigger wake
+ *  events via the mention parser. */
+export const postProjectComment = (
+  projectId: string,
+  actorId: string,
+  body: string,
+  commentType = 'update',
+) =>
+  request<Comment>(`/projects/${projectId}/comments`, {
+    method: 'POST',
+    body: JSON.stringify({ actor_id: actorId, body, comment_type: commentType }),
+  });
+
+/** Read project-level comments. */
+export const getProjectComments = (projectId: string) =>
+  request<Comment[]>(`/projects/${projectId}/comments`);
+
+/**
+ * Read a file from the project workspace via the existing project files
+ * endpoint. The OpenAI bot's `read_memory_file` tool calls this with paths
+ * scoped to the `memory/` directory.
+ */
+export const readProjectFile = (projectId: string, filePath: string) =>
+  request<{ content: string; is_binary: boolean; size: number }>(
+    `/projects/${projectId}/files/read?path=${encodeURIComponent(filePath)}`,
+  );

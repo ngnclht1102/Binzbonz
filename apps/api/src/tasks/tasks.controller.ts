@@ -25,6 +25,11 @@ export class TasksController {
     return this.service.findByProject(projectId);
   }
 
+  @Get('actors/:actorId/tasks')
+  findByAssignee(@Param('actorId') actorId: string) {
+    return this.service.findByAssignee(actorId);
+  }
+
   @Get('tasks/:id')
   findOne(@Param('id') id: string) {
     return this.service.findOne(id);

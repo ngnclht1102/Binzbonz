@@ -12,6 +12,7 @@ import {
   type Actor,
 } from "@/lib/api";
 import { useEventsStore } from "@/lib/stores/events-store";
+import MentionInput from "@/components/mention-input";
 
 const TASK_STATUS_COLORS: Record<string, string> = {
   backlog: "bg-gray-600/30 text-gray-400",
@@ -199,14 +200,14 @@ export default function TaskDetailPage() {
         </div>
 
         <div className="mt-4 flex gap-2">
-          <input
-            type="text"
+          <MentionInput
             value={commentBody}
-            onChange={(e) => setCommentBody(e.target.value)}
+            onChange={setCommentBody}
+            actors={agents}
             placeholder="Write a comment..."
-            className="flex-1 px-3 py-2 bg-gray-800 border border-gray-700 rounded text-sm focus:outline-none focus:border-blue-500"
-            onKeyDown={(e) => {
-              if (e.key === "Enter" && commentBody.trim()) {
+            className="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded text-sm focus:outline-none focus:border-blue-500"
+            onSubmit={() => {
+              if (commentBody.trim()) {
                 handlePostComment(commentBody.trim());
                 setCommentBody("");
               }
