@@ -7,6 +7,7 @@ import {
 import { InjectRepository } from '@nestjs/typeorm';
 import { Not, Repository } from 'typeorm';
 import { Actor } from './actor.entity.js';
+import { AgentProjectSession } from '../agent-project-sessions/agent-project-session.entity.js';
 import { redactActor, redactActors } from './actor-redact.js';
 import { CreateActorDto } from './dto/create-actor.dto.js';
 import { UpdateActorDto } from './dto/update-actor.dto.js';
@@ -20,6 +21,8 @@ export class ActorsService {
   constructor(
     @InjectRepository(Actor)
     private readonly repo: Repository<Actor>,
+    @InjectRepository(AgentProjectSession)
+    private readonly sessionRepo: Repository<AgentProjectSession>,
   ) {}
 
   // ─── Public (redacted) lookups ────────────────────────────────────────
@@ -64,8 +67,20 @@ export class ActorsService {
 
   async remove(id: string) {
     const actor = await this.findOneRaw(id);
+
+    // Explicitly drop all agent_project_session rows (and the OpenAI
+    // message_history they hold) BEFORE deleting the actor. The entity FK
+    // already has ON DELETE CASCADE, but TypeORM `synchronize: true` is
+    // unreliable about installing FK constraints on existing tables — this
+    // explicit delete makes the cleanup deterministic regardless of schema.
+    const sessionDelete = await this.sessionRepo.delete({ agent_id: id });
+    if (sessionDelete.affected && sessionDelete.affected > 0) {
+      // (no logger on this service yet, just keep it silent — the action
+      // is logged at the HTTP layer anyway)
+    }
+
     await this.repo.remove(actor);
-    return { deleted: true };
+    return { deleted: true, sessions_removed: sessionDelete.affected ?? 0 };
   }
 
   // ─── Heartbeat ────────────────────────────────────────────────────────

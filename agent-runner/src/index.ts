@@ -114,7 +114,20 @@ async function runClaudeWake(
 
   const { onChunk, flush } = makeProgressTimer(taskId, actor.id);
 
-  let result = await spawnClaude(sessionState.session_id, prompt, project.repo_path ?? undefined, onChunk);
+  // Fix 4: Persist session_id the moment claude announces it (in the
+  // system/init event, ~100ms after spawn). If the runner crashes or
+  // claude gets killed mid-spawn, the id is already in the DB and the
+  // terminal can resume it on the next click.
+  const onSessionId = (sid: string) => {
+    log('runner', ` Captured session_id ${sid.slice(0, 8)} for ${actor.name}, persisting early`);
+    upsertAgentProjectSession(actor.id, event.project_id, {
+      session_id: sid,
+    }).catch((err) => {
+      logError('runner', `Failed to early-upsert session_id: ${err instanceof Error ? err.message : String(err)}`);
+    });
+  };
+
+  let result = await spawnClaude(sessionState.session_id, prompt, project.repo_path ?? undefined, onChunk, onSessionId);
 
   if (result.fatalError) {
     await flush();
@@ -139,7 +152,7 @@ async function runClaudeWake(
     const rebuilt = await buildPrompt(event, actor, sessionState);
     prompt = rebuilt.prompt;
     isNewSession = true;
-    result = await spawnClaude(null, prompt, project.repo_path ?? undefined, onChunk);
+    result = await spawnClaude(null, prompt, project.repo_path ?? undefined, onChunk, onSessionId);
 
     if (result.fatalError) {
       await flush();

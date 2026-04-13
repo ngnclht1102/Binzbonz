@@ -11,6 +11,8 @@ import {
   setActorHeartbeat,
   updateProviderConfig,
   ensureAgentProjectSession,
+  resetAgentProjectSession,
+  deleteActor,
   isOpenAIRole,
   type Actor,
   type AgentProjectSession,
@@ -59,6 +61,10 @@ export default function GlobalAgentDetailPage() {
   // corresponding session row id. Defaults to the most recently active.
   const [slideProjectId, setSlideProjectId] = useState<string | null>(null);
   const [slideSessionId, setSlideSessionId] = useState<string | null>(null);
+
+  // Confirmation state for destructive actions
+  const [showDeleteAgent, setShowDeleteAgent] = useState(false);
+  const [resettingSessionId, setResettingSessionId] = useState<string | null>(null);
 
   const fetchData = async () => {
     try {
@@ -230,6 +236,13 @@ export default function GlobalAgentDetailPage() {
                 ⏱ heartbeat
               </span>
             )}
+            <button
+              onClick={() => setShowDeleteAgent(true)}
+              className="ml-auto text-xs px-2 py-1 text-red-400 hover:text-red-300 hover:bg-red-900/30 rounded transition-colors"
+              title="Delete agent"
+            >
+              Delete
+            </button>
           </div>
           {/* Launcher: terminal for Claude only. OpenAI agents use the
               always-visible chat slide on the right side of the page, so
@@ -325,30 +338,54 @@ export default function GlobalAgentDetailPage() {
                           : "never"}
                       </td>
                       <td className="px-3 py-2 text-right">
-                        {isOpenAIRole(agent.role) ? (
-                          <button
-                            onClick={() => setSlideProjectId(project.id)}
-                            className={`text-xs px-2 py-0.5 rounded transition-colors ${
-                              slideProjectId === project.id
-                                ? "bg-blue-900/40 text-blue-300"
-                                : "bg-gray-800 hover:bg-gray-700"
-                            }`}
-                            title="Show this project's conversation in the side panel"
-                          >
-                            💬 {slideProjectId === project.id ? "showing" : "show"}
-                          </button>
-                        ) : (
-                          <button
-                            onClick={() => {
-                              setTerminalProjectId(project.id);
-                              setShowTerminal(true);
-                            }}
-                            className="text-xs px-2 py-0.5 rounded bg-gray-800 hover:bg-gray-700 transition-colors"
-                            title="Open terminal in this project"
-                          >
-                            terminal
-                          </button>
-                        )}
+                        <div className="flex items-center justify-end gap-1">
+                          {isOpenAIRole(agent.role) ? (
+                            <button
+                              onClick={() => setSlideProjectId(project.id)}
+                              className={`text-xs px-2 py-0.5 rounded transition-colors ${
+                                slideProjectId === project.id
+                                  ? "bg-blue-900/40 text-blue-300"
+                                  : "bg-gray-800 hover:bg-gray-700"
+                              }`}
+                              title="Show this project's conversation in the side panel"
+                            >
+                              💬 {slideProjectId === project.id ? "showing" : "show"}
+                            </button>
+                          ) : (
+                            <button
+                              onClick={() => {
+                                setTerminalProjectId(project.id);
+                                setShowTerminal(true);
+                              }}
+                              className="text-xs px-2 py-0.5 rounded bg-gray-800 hover:bg-gray-700 transition-colors"
+                              title="Open terminal in this project"
+                            >
+                              terminal
+                            </button>
+                          )}
+                          {/* Reset button — only when there's a session to reset */}
+                          {session && (session.session_id || (session.message_count ?? 0) > 0) && (
+                            <button
+                              onClick={async () => {
+                                if (resettingSessionId) return;
+                                if (!confirm(`Reset ${agent.name}'s session for "${project.name}"? This clears the session id and chat history. The next spawn will start fresh.`)) return;
+                                setResettingSessionId(session.id);
+                                try {
+                                  await resetAgentProjectSession(session.id);
+                                  await fetchData();
+                                } catch (err) {
+                                  alert(err instanceof Error ? err.message : 'Failed to reset');
+                                }
+                                setResettingSessionId(null);
+                              }}
+                              disabled={resettingSessionId === session.id}
+                              className="text-xs px-2 py-0.5 rounded bg-yellow-900/30 hover:bg-yellow-900/50 text-yellow-300 transition-colors disabled:opacity-50"
+                              title="Reset this (agent, project) session — drops session_id and chat history, keeps the row"
+                            >
+                              {resettingSessionId === session.id ? '...' : '↻ reset'}
+                            </button>
+                          )}
+                        </div>
                       </td>
                     </tr>
                   );
@@ -445,6 +482,97 @@ export default function GlobalAgentDetailPage() {
           onClose={() => setChatSessionId(null)}
         />
       )}
+
+      {/* Delete Agent confirmation */}
+      {showDeleteAgent && (
+        <DeleteAgentDialog
+          agent={agent}
+          onConfirm={async () => {
+            try {
+              await deleteActor(agent.id);
+              router.push("/agents");
+            } catch (err) {
+              alert(err instanceof Error ? err.message : "Failed to delete agent");
+            }
+          }}
+          onClose={() => setShowDeleteAgent(false)}
+        />
+      )}
+    </div>
+  );
+}
+
+// ─── Delete Agent Dialog ────────────────────────────────────────────────
+
+function DeleteAgentDialog({
+  agent,
+  onConfirm,
+  onClose,
+}: {
+  agent: Actor;
+  onConfirm: () => Promise<void>;
+  onClose: () => void;
+}) {
+  const [confirmText, setConfirmText] = useState("");
+  const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState("");
+
+  const canConfirm = confirmText === agent.name && !submitting;
+
+  const handleConfirm = async () => {
+    setSubmitting(true);
+    setError("");
+    try {
+      await onConfirm();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed");
+      setSubmitting(false);
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[200] p-4">
+      <div className="bg-gray-900 border border-gray-700 rounded-lg p-6 w-full max-w-md">
+        <h3 className="font-bold text-lg mb-2">Delete Agent</h3>
+        <p className="text-sm text-gray-300 mb-4">
+          This will permanently delete <span className="font-semibold text-white">{agent.name}</span> and:
+        </p>
+        <ul className="text-sm text-gray-400 mb-4 list-disc pl-5 space-y-1">
+          <li>All per-project session rows (Claude session ids, OpenAI message histories)</li>
+          <li>All wake events (queued, in-progress, history)</li>
+          <li>Tasks they were assigned to will become unassigned (the tasks survive)</li>
+          <li>Their comments survive but show as having no author</li>
+        </ul>
+        <div className="mb-4">
+          <label className="block text-xs text-gray-500 mb-1">
+            Type <span className="text-gray-300 font-mono">{agent.name}</span> to confirm:
+          </label>
+          <input
+            type="text"
+            value={confirmText}
+            onChange={(e) => setConfirmText(e.target.value)}
+            className="w-full px-3 py-1.5 bg-gray-800 border border-gray-700 rounded text-sm font-mono focus:outline-none focus:border-red-500"
+            autoFocus
+          />
+        </div>
+        {error && <p className="text-red-400 text-sm mb-3">{error}</p>}
+        <div className="flex justify-end gap-2">
+          <button
+            onClick={onClose}
+            disabled={submitting}
+            className="px-3 py-1.5 bg-gray-700 hover:bg-gray-600 rounded text-sm disabled:opacity-50"
+          >
+            Cancel
+          </button>
+          <button
+            onClick={handleConfirm}
+            disabled={!canConfirm}
+            className="px-3 py-1.5 bg-red-600 hover:bg-red-500 rounded text-sm font-medium disabled:bg-gray-700 disabled:text-gray-500"
+          >
+            {submitting ? "Deleting..." : "Delete Agent"}
+          </button>
+        </div>
+      </div>
     </div>
   );
 }

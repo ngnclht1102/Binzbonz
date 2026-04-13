@@ -115,4 +115,15 @@ export class AgentProjectSessionsController {
   remove(@Param('id') id: string) {
     return this.service.remove(id);
   }
+
+  /**
+   * POST /agent-project-sessions/:id/reset
+   * Clears session_id, message_history, last_token_count, last_active_at —
+   * but keeps the row. Forces a fresh session on the next spawn for this
+   * (agent, project) pair without losing the row's history.
+   */
+  @Post(':id/reset')
+  reset(@Param('id') id: string) {
+    return this.service.reset(id);
+  }
 }

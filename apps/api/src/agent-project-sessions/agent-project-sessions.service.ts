@@ -144,4 +144,21 @@ export class AgentProjectSessionsService {
     await this.repo.remove(row);
     return { deleted: true };
   }
+
+  /**
+   * Reset a session: clear session_id, message_history, and last_token_count
+   * but keep the row (and its created_at). Used to recover a (agent, project)
+   * pair that has a broken claude session id or stale OpenAI history without
+   * losing the row entirely.
+   */
+  async reset(id: string) {
+    const row = await this.repo.findOne({ where: { id } });
+    if (!row) throw new NotFoundException(`AgentProjectSession ${id} not found`);
+    row.session_id = null;
+    row.message_history = [];
+    row.last_token_count = 0;
+    row.last_active_at = null;
+    await this.repo.save(row);
+    return { reset: true, id: row.id };
+  }
 }

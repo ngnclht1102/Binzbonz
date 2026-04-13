@@ -1,0 +1,1 @@
+psql postgres://binzbonz:binzbonz@127.0.0.1:54329/binzbonz -c "SELECT * FROM actor ORDER BY name;" 2>&1

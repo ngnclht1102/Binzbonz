@@ -133,6 +133,12 @@ export const createActor = (data: {
   provider_api_key?: string;
 }) => request<Actor>("/actors", { method: "POST", body: JSON.stringify(data) });
 
+export const deleteActor = (id: string) =>
+  request<{ deleted: boolean; sessions_removed: number }>(
+    `/actors/${id}`,
+    { method: "DELETE" },
+  );
+
 // Heartbeat
 export const setActorHeartbeat = (
   id: string,
@@ -169,6 +175,13 @@ export const getAgentProjectSession = (agentId: string, projectId: string) =>
   );
 export const deleteAgentProjectSession = (id: string) =>
   request<{ deleted: boolean }>(`/agent-project-sessions/${id}`, { method: "DELETE" });
+
+/** Reset a (agent, project) session row — clears session_id and message_history
+ *  but keeps the row. Forces a fresh session on next spawn. */
+export const resetAgentProjectSession = (id: string) =>
+  request<{ reset: boolean; id: string }>(`/agent-project-sessions/${id}/reset`, {
+    method: "POST",
+  });
 
 /**
  * Find or create the (agent, project) session row. The PATCH endpoint

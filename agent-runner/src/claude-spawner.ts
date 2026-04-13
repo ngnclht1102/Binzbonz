@@ -21,6 +21,7 @@ async function runClaude(
   args: string[],
   cwd: string | undefined,
   onTextChunk?: (text: string) => void,
+  onSessionId?: (sessionId: string) => void,
 ): Promise<RunResult> {
   let fullText = '';
   let sessionId: string | null = null;
@@ -28,10 +29,22 @@ async function runClaude(
   let rawStdout = '';
   let rawStderr = '';
   const errors: string[] = [];
+  // Track which session_ids we've already reported via onSessionId so we
+  // don't fire the callback multiple times for the same id (system/init
+  // and result events both contain it).
+  const reportedSessionIds = new Set<string>();
+  const reportSessionId = (id: string) => {
+    if (reportedSessionIds.has(id)) return;
+    reportedSessionIds.add(id);
+    if (onSessionId) onSessionId(id);
+  };
 
   const proc = execa('claude', args, {
     cwd: cwd ?? undefined,
-    timeout: 300_000,
+    // Fix 2: bumped from 5 minutes to 30 minutes. Real dev tasks need that
+    // much. Watchdog + manual cancel + cancel-on-task-cancelled catch real
+    // runaways. Anything still running at 30 min is a hung claude — kill it.
+    timeout: 1_800_000,
     reject: false,
     stdin: 'ignore',
     stdout: 'pipe',
@@ -58,6 +71,21 @@ async function runClaude(
         try {
           const event = JSON.parse(line);
 
+          // Fix 1: capture session_id from the system/init event, which
+          // fires within ~100ms of spawn. Previously we only captured it
+          // from the `result` event at the very end, so SIGTERM-killed
+          // spawns lost their session id.
+          if (
+            event.type === 'system' &&
+            event.subtype === 'init' &&
+            event.session_id
+          ) {
+            sessionId = event.session_id;
+            // Fix 4: notify caller immediately so they can persist it
+            // before anything else can fail.
+            reportSessionId(event.session_id);
+          }
+
           if (event.type === 'content_block_delta' && event.delta?.text) {
             fullText += event.delta.text;
             if (onTextChunk) onTextChunk(event.delta.text);
@@ -73,7 +101,13 @@ async function runClaude(
           }
 
           if (event.type === 'result') {
-            sessionId = event.session_id ?? sessionId;
+            // The result event's session_id is the most authoritative —
+            // it accounts for any session forks during the run. Override
+            // whatever we captured from system/init with this one.
+            if (event.session_id) {
+              sessionId = event.session_id;
+              reportSessionId(event.session_id);
+            }
             inputTokens = event.usage?.input_tokens ?? inputTokens;
             if (event.is_error && event.errors) {
               errors.push(...event.errors);
@@ -184,6 +218,7 @@ export async function spawnClaude(
   prompt: string,
   cwd: string | undefined,
   onTextChunk?: (text: string) => void,
+  onSessionId?: (sessionId: string) => void,
 ): Promise<SpawnResult> {
 
   // === RESUME PATH ===
@@ -198,7 +233,7 @@ export async function spawnClaude(
 
     for (let attempt = 1; attempt <= 3; attempt++) {
       log("spawner", `RESUME attempt ${attempt}/3: ${existingSessionId.slice(0, 8)} (cwd: ${cwd ?? 'inherited'})`);
-      const result = await runClaude(resumeArgs, cwd, onTextChunk);
+      const result = await runClaude(resumeArgs, cwd, onTextChunk, onSessionId);
 
       // Log raw result for debugging
       log("spawner", `Result: exit=${result.exitCode} text=${result.textOutput.length}b errors=[${result.errors.join('; ').slice(0, 200)}] stderr=${result.rawStderr.slice(0, 200)} stdout=${result.rawStdout.slice(0, 200)}`);
@@ -244,7 +279,7 @@ export async function spawnClaude(
 
   for (let attempt = 1; attempt <= 3; attempt++) {
     log("spawner", `NEW SESSION attempt ${attempt}/3 (cwd: ${cwd ?? 'inherited'})`);
-    const result = await runClaude(newArgs, cwd, onTextChunk);
+    const result = await runClaude(newArgs, cwd, onTextChunk, onSessionId);
 
     log("spawner", `Result: exit=${result.exitCode} text=${result.textOutput.length}b errors=[${result.errors.join('; ').slice(0, 200)}] stderr=${result.rawStderr.slice(0, 200)} stdout=${result.rawStdout.slice(0, 200)}`);
 
