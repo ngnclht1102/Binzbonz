@@ -19,7 +19,7 @@ This is also the carrier for the "no heartbeats for Claude" decision: heartbeat-
 
 ## Goals
 
-1. Add two new roles: **`openapidev`** and **`openapicoor`**, each backed by an OpenAI-compatible HTTP API. Claude developers/ctbaceo and OpenAI dev/coordinator coexist in the same `actor` table, the same wake event queue, and the same agent runner process.
+1. Add two new roles: **`openapidev`** and **`openapicoor`**, each backed by an OpenAI-compatible HTTP API. Claude developers/master and OpenAI dev/coordinator coexist in the same `actor` table, the same wake event queue, and the same agent runner process.
 2. **One runner, two spawners.** The runner reads `actor.role` and dispatches to either `claude-spawner` (today) or `openai-spawner` (new). Everything upstream (queue, dedup, processing-state machine, project gating) stays identical.
 3. The OpenAI bot has **tool access only via Binzbonz's HTTP API** — never direct file system, shell, or git. Tools are JSON-schema definitions in the spawner that proxy to our own endpoints.
 4. The OpenAI bot has **no project workspace, no CLI, no PTY**. Pure HTTP-in/HTTP-out.
@@ -31,14 +31,14 @@ This is also the carrier for the "no heartbeats for Claude" decision: heartbeat-
 
 ## Roles
 
-We add **two new roles** to the existing `developer` / `ctbaceo` enum:
+We add **two new roles** to the existing `developer` / `master` enum:
 
 | Role | Skill file | Provider | Purpose |
 |---|---|---|---|
 | `developer` | `skills/developer.md` | Claude CLI | Builds code in a project workspace |
-| `ctbaceo` | `skills/ctbaceo.md` | Claude CLI | Coordinates Claude developers, breaks down briefs |
+| `master` | `skills/master.md` | Claude CLI | Coordinates Claude developers, breaks down briefs |
 | `openapidev` | `skills/openapidev.md` (new) | OpenAI-compatible | Lightweight dev assistant — reads tasks, posts comments, light coordination work, no file editing |
-| `openapicoor` | `skills/openapicoor.md` (new) | OpenAI-compatible | Coordinator equivalent of ctbaceo — runs cheaply, scans work, reassigns, nudges stuck agents |
+| `openapicoor` | `skills/openapicoor.md` (new) | OpenAI-compatible | Coordinator equivalent of master — runs cheaply, scans work, reassigns, nudges stuck agents |
 
 The role itself determines which spawner runs:
 
@@ -51,7 +51,7 @@ const result = isOpenAI
 
 No separate `provider` column — the role IS the provider indicator. Cleaner mental model: each role has its own skill file, its own runtime.
 
-The new skill files (`openapidev.md`, `openapicoor.md`) are explicitly written for an HTTP-tool-calling bot — they describe the available tools, what the bot can and cannot do, and the comment-only output channel. They are NOT just copies of `developer.md` / `ctbaceo.md`.
+The new skill files (`openapidev.md`, `openapicoor.md`) are explicitly written for an HTTP-tool-calling bot — they describe the available tools, what the bot can and cannot do, and the comment-only output channel. They are NOT just copies of `developer.md` / `master.md`.
 
 ---
 
@@ -90,7 +90,7 @@ actor
 
 Three new columns. Only populated when role is `openapidev` or `openapicoor`. The validation rule:
 
-- Role `developer` / `ctbaceo` → all three new columns must be NULL
+- Role `developer` / `master` → all three new columns must be NULL
 - Role `openapidev` / `openapicoor` → all three new columns must be set
 
 **Storing the API key in the DB.** The user explicitly chose this over env-var indirection. Trade-offs documented:
@@ -492,7 +492,7 @@ On the agent detail page (only for `openapidev` / `openapicoor` roles), add a **
 └─────────────────────────────────────────────┘
 ```
 
-If another bot already has heartbeat enabled, the toggle is **disabled** and shows: `Heartbeat is owned by "ctbaceo-deepseek". Disable it there first.` (with a link to that agent's page).
+If another bot already has heartbeat enabled, the toggle is **disabled** and shows: `Heartbeat is owned by "master-deepseek". Disable it there first.` (with a link to that agent's page).
 
 The Save button calls `PATCH /actors/:id/heartbeat`. On 409, surface the error message inline.
 
@@ -642,7 +642,7 @@ POST   /agent-project-sessions/:id/chat               Send a chat message (creat
 
 Validation:
 - If `role` is `openapidev` or `openapicoor` → all three provider fields required
-- If `role` is `developer` or `ctbaceo` → all three provider fields must be absent (or rejected)
+- If `role` is `developer` or `master` → all three provider fields must be absent (or rejected)
 
 `GET /agent-project-sessions?...` — **strip** `message_history` from the response. The list endpoint stays light (could be megabytes per agent otherwise). The dedicated `/messages` endpoint is the only way to get the full history.
 
@@ -679,7 +679,7 @@ The current "New Agent" dialog has only `name` + `role`. After this:
 ├────────────────────────────────────────────────┤
 │ Name:    [_________________]                   │
 │ Role:    ◯ developer  (Claude CLI)             │
-│          ◯ ctbaceo    (Claude CLI)             │
+│          ◯ master    (Claude CLI)             │
 │          ◯ openapidev (OpenAI-compatible API)  │
 │          ◯ openapicoor(OpenAI-compatible API)  │
 │                                                │

@@ -4,7 +4,7 @@ import { In, Repository } from 'typeorm';
 import { Actor } from '../actors/actor.entity.js';
 
 const SEED_ACTORS = [
-  { name: 'ctbaceo', type: 'agent', role: 'ctbaceo', status: 'idle' },
+  { name: 'master', type: 'agent', role: 'master', status: 'idle' },
   { name: 'dev-1', type: 'agent', role: 'developer', status: 'idle' },
   { name: 'dev-2', type: 'agent', role: 'developer', status: 'idle' },
   { name: 'dev-3', type: 'agent', role: 'developer', status: 'idle' },

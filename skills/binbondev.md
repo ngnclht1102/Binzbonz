@@ -1,17 +1,3 @@
-# binbondev — Working on the Binzbonz Codebase
-
-You are working on **Binzbonz**, a self-hosted agent orchestration platform. This skill describes what's built, the architecture, and the conventions to follow when adding features.
-
----
-
-## What Binzbonz Is
-
-A platform that orchestrates a flat pool of Claude Code agents to build software projects. Humans create projects with a brief; a CTBACEO agent breaks the brief into a ticket hierarchy and assigns work to developer agents. Developers wake on @mention or assignment, work in isolated git worktrees, and post progress as comments.
-
-**Core idea:** every actor (human or agent) is a row in the `actor` table. Communication happens through ticket comments. Agents are woken via `wake_event` rows that the `agent-runner` polls. The runner spawns `claude` CLI sessions per agent, resumes them across runs, and streams output back as comments.
-
----
-
 ## Tech Stack
 
 | Layer | Choice |
@@ -31,70 +17,6 @@ A platform that orchestrates a flat pool of Claude Code agents to build software
 - `embedded-postgres` requires the platform-specific binary package (e.g. `@embedded-postgres/darwin-arm64`)
 - `nest start --watch` does NOT play well with `incremental: true` in tsconfig — leave it `false`
 - All build scripts that need native compilation must be approved in root `package.json` under `pnpm.onlyBuiltDependencies`
-
----
-
-## Repo Layout
-
-```
-/
-├── apps/
-│   ├── api/                     NestJS backend (port 3001)
-│   │   ├── src/
-│   │   │   ├── actors/          actor entity + CRUD
-│   │   │   ├── projects/        project entity + workspace setup
-│   │   │   ├── hierarchy/       MVP/Sprint/Epic/Feature
-│   │   │   ├── tasks/           tasks + subtasks + status transitions
-│   │   │   ├── comments/        comments + mention parser → wake events
-│   │   │   ├── wake-events/     wake event queue
-│   │   │   ├── memory/          shared memory files
-│   │   │   ├── seed/            seeds 8 default actors on startup
-│   │   │   ├── database/        EmbeddedPostgresService + DatabaseModule
-│   │   │   ├── events/          pg_notify triggers + SSE gateway
-│   │   │   ├── terminal/        WebSocket gateway for interactive Claude sessions
-│   │   │   ├── filesystem/      directory browser endpoints (used by New Project picker)
-│   │   │   ├── dual-logger.ts   NestJS logger that writes to both console and file
-│   │   │   ├── file-logger.service.ts  inline batched file logger
-│   │   │   ├── logging.interceptor.ts  HTTP request/response logging
-│   │   │   └── main.ts          bootstrap, port 3001, WS adapter
-│   │   └── data/postgres/       embedded postgres data (gitignored)
-│   └── web/                     Next.js frontend (port 3000)
-│       ├── app/
-│       │   ├── projects/        project list, new, detail (board/tree/agents/tasks)
-│       │   ├── agents/          global agents list + detail (with terminal)
-│       │   └── layout.tsx       sidebar layout
-│       ├── components/
-│       │   ├── sidebar.tsx           projects + agents nav
-│       │   ├── web-terminal.tsx      xterm.js terminal modal
-│       │   └── directory-picker.tsx  filesystem browse modal with mkdir
-│       └── lib/
-│           ├── api.ts           typed fetch wrapper for all endpoints
-│           └── stores/          Zustand stores (projects, tasks, actors, events)
-├── agent-runner/                worker process (TypeScript, ESM)
-│   ├── src/
-│   │   ├── index.ts             main loop + watchdog hooks
-│   │   ├── api-client.ts        HTTP client to the API
-│   │   ├── prompt-builder.ts    builds prompts from skill files + task context
-│   │   ├── claude-spawner.ts    spawns claude CLI with retry/quota detection
-│   │   ├── logger.ts            inline batched file logger
-│   │   └── types.ts
-│   └── watchdog.sh              auto-restarts the runner on crash
-├── skills/
-│   ├── developer.md             skill loaded for developer agents
-│   ├── ctbaceo.md               skill loaded for the CTBACEO agent
-│   └── binbondev.md             this file — for working ON the codebase
-├── docs/
-│   ├── main_doc.md              original BRD + tech architecture
-│   └── roadmap/
-│       ├── multi-account-sessions.md   plan for per-account session storage
-│       └── file-tree-editor.md          plan for project file browser + editor
-├── tickets/                     25 numbered tickets, build-order checklist
-├── logs/                        api-YYYY-MM-DD.log + agent-runner-YYYY-MM-DD.log
-├── start.sh                     kill stale processes + run pnpm dev
-├── pnpm-workspace.yaml
-├── turbo.json
-└── package.json
-```
 
 ---
 
@@ -122,14 +44,14 @@ A platform that orchestrates a flat pool of Claude Code agents to build software
 - **Per-event flow**:
   1. Mark event `processing`
   2. Load actor + project
-  3. **Gate**: if project status is `analysing` or `paused` AND agent is not `ctbaceo` → mark `skipped`
+  3. **Gate**: if project status is `analysing` or `paused` AND agent is not `master` → mark `skipped`
   4. Set actor status `working`
   5. Build prompt (see below)
   6. Spawn Claude (resume if session exists, else new)
   7. Post output as comment(s) on the task
   8. Update actor: `session_id`, `last_token_count`, `last_active_at`, status `idle`
   9. Mark event `done` (or `failed` on error)
-- **Prompt builder** (`prompt-builder.ts`): for NEW sessions, loads the full skill file (`developer.md` or `ctbaceo.md`) + identity + project context + task context + recent comments + memory changes since last active. For RESUMED sessions, only sends the new context (skill is already in the agent's session memory).
+- **Prompt builder** (`prompt-builder.ts`): for NEW sessions, loads the full skill file (`developer.md` or `master.md`) + identity + project context + task context + recent comments + memory changes since last active. For RESUMED sessions, only sends the new context (skill is already in the agent's session memory).
 - **Claude spawner** (`claude-spawner.ts`):
   - Always uses `--dangerously-skip-permissions --verbose --output-format stream-json -p <prompt>`
   - Always uses `stdin: 'ignore'` to avoid the "no stdin data received" warning
@@ -146,7 +68,7 @@ A platform that orchestrates a flat pool of Claude Code agents to build software
 - **New Project** (`/projects/new`): name + brief + optional Workspace Path with a **Browse...** button that opens `DirectoryPicker` (modal that calls `/filesystem/browse` and supports creating folders).
 - **Project detail** (`/projects/:id`): tabs (Board / Tree / Agents). Shows project status as a clickable dropdown. **+ New Task** button opens a dialog with type selection (MVP / Sprint / Epic / Feature / Task / Subtask) and optional parent selection. If no parent is picked, the API client auto-creates the missing hierarchy via `ensureMvp / ensureSprint / ensureEpic / ensureFeature` helpers.
 - **Board view**: kanban columns by task status (backlog, assigned, in_progress, blocked, review_request, done, cancelled). Click any task → opens `TaskDetail` sidebar.
-- **TaskDetail sidebar**: status dropdown, agent assignment dropdown (shows ALL agents including ctbaceo, not just developers), description, subtasks, comments. Has a `⛶` expand button that opens the full-page route. Header/footer fixed, middle scrolls. **Auto-scrolls to bottom only when NEW comments arrive**, not on every re-render.
+- **TaskDetail sidebar**: status dropdown, agent assignment dropdown (shows ALL agents including master, not just developers), description, subtasks, comments. Has a `⛶` expand button that opens the full-page route. Header/footer fixed, middle scrolls. **Auto-scrolls to bottom only when NEW comments arrive**, not on every re-render.
 - **Full-page task detail** (`/projects/:id/tasks/:taskId`): same content as the sidebar but full-width, with SSE auto-update.
 - **Tree view** (`/projects/:id/tree`): collapsible hierarchy tree with status icons (`○◐◑⊘◎●⊗`) on every node — derived from descendant tasks for non-task nodes. Status + owner filters that hide non-matching subtrees. Clicking a task opens the same sidebar (not a new page).
 - **Agent pool** (`/projects/:id/agents` and global `/agents`): grid of agent cards with status dots, role badges, "Create Agent" button. Click → agent detail.
@@ -216,9 +138,9 @@ A platform that orchestrates a flat pool of Claude Code agents to build software
 
 ### Skill files
 
-- `skills/developer.md` and `skills/ctbaceo.md` are loaded by the prompt builder for NEW sessions only
+- `skills/developer.md` and `skills/master.md` are loaded by the prompt builder for NEW sessions only
 - They're plain markdown — keep them human-readable
-- The prompt builder finds them by walking up from `process.cwd()` looking for a directory containing `skills/ctbaceo.md`
+- The prompt builder finds them by walking up from `process.cwd()` looking for a directory containing `skills/master.md`
 - When updating skill files, the changes apply to the NEXT new session — existing resumed sessions retain the old skill content in their conversation history
 
 ---
@@ -263,7 +185,7 @@ A platform that orchestrates a flat pool of Claude Code agents to build software
 
 ### Add a new skill instruction for agents
 
-1. Edit `skills/developer.md` or `skills/ctbaceo.md`
+1. Edit `skills/developer.md` or `skills/master.md`
 2. **Existing resumed sessions won't pick up the change** — only new sessions get the updated skill
 3. To force all agents to get the new skill: clear `actor.session_id` for everyone in the DB (or wait for natural session expiry)
 

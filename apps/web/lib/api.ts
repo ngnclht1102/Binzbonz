@@ -24,7 +24,7 @@ export interface Actor {
   id: string;
   name: string;
   type: string;
-  role: string | null; // developer | ctbaceo | openapidev | openapicoor | null
+  role: string | null; // developer | master | openapidev | openapicoor | null
   status: string;
   created_at: string;
   // OpenAI provider config (only set for openapidev / openapicoor).
@@ -36,12 +36,30 @@ export interface Actor {
   heartbeat_enabled?: boolean;
   heartbeat_interval_seconds?: number;
   heartbeat_last_at?: string | null;
+  // Rolling tail of the agent's stdout while it's working (128KB cap).
+  // Cleared by the API when status flips to idle.
+  live_output?: string | null;
+  live_output_updated_at?: string | null;
 }
 
-export type AgentRole = 'developer' | 'ctbaceo' | 'openapidev' | 'openapicoor';
+export type AgentRole = 'developer' | 'master' | 'openapidev' | 'openapicoor';
 export const OPENAPI_ROLES: Set<string> = new Set(['openapidev', 'openapicoor']);
 export const isOpenAIRole = (role: string | null): boolean =>
   !!role && OPENAPI_ROLES.has(role);
+
+/**
+ * UI-layout question: does this role use the inline "chat slide" pattern
+ * (right-side AgentChat panel + Open Conversation modal button)?
+ *
+ * Only openapicoor does. openapidev is now treated as a regular developer
+ * in the UI — it gets the Terminal button + live stream pane, same as
+ * Claude developers — because those agents actually write code now. This
+ * is separate from `isOpenAIRole` on purpose: provider-config and
+ * heartbeat cards still gate on `isOpenAIRole` since both openapi roles
+ * still hit an OpenAI-compatible backend.
+ */
+export const usesChatSlideUI = (role: string | null): boolean =>
+  role === 'openapicoor';
 
 /** Per-project session row, joined with project info when listed for an agent. */
 export interface AgentProjectSession {
@@ -228,8 +246,12 @@ export const getWakeEvents = (params?: Record<string, string>) => {
 // Projects
 export const getProjects = () => request<Project[]>("/projects");
 export const getProject = (id: string) => request<Project>(`/projects/${id}`);
-export const createProject = (data: { name: string; brief: string; repo_path?: string }) =>
-  request<Project>("/projects", { method: "POST", body: JSON.stringify(data) });
+export const createProject = (data: {
+  name: string;
+  brief: string;
+  repo_path?: string;
+  import_path?: string;
+}) => request<Project>("/projects", { method: "POST", body: JSON.stringify(data) });
 export const updateProject = (id: string, data: Partial<Project>) =>
   request<Project>(`/projects/${id}`, { method: "PATCH", body: JSON.stringify(data) });
 export const deleteProject = (id: string, deleteFiles = false) =>

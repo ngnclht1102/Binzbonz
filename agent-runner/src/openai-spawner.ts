@@ -22,7 +22,7 @@
 
 import type { Actor, OpenAIMessage, OpenAIToolCall } from './types.js';
 import type { SpawnResult } from './claude-spawner.js';
-import { TOOL_DEFINITIONS, executeTool, type ToolContext } from './openai-tools.js';
+import { getToolDefinitions, executeTool, type ToolContext } from './openai-tools.js';
 import { compact, shouldCompact, getContextWindow } from './openai-compactor.js';
 import { log, warn, error as logError } from './logger.js';
 
@@ -32,6 +32,10 @@ const REQUEST_TIMEOUT_MS = 120_000;
 export interface OpenAISpawnArgs {
   actor: Actor;
   projectId: string;
+  /** Filesystem root for developer tools (read_file, write_file, run_shell).
+   *  Null if the project has no repo_path — in that case developer tools
+   *  will refuse to run. */
+  repoPath: string | null;
   /** Existing message history for this (agent, project). Empty array on first wake. */
   history: OpenAIMessage[];
   /** New user message to append before the first call (already built by prompt-builder). */
@@ -119,7 +123,8 @@ export async function spawnOpenAI(args: OpenAISpawnArgs): Promise<OpenAISpawnRes
 
   // ─── Tool-call loop ──────────────────────────────────────────────────
 
-  const ctx: ToolContext = { actor, projectId };
+  const ctx: ToolContext = { actor, projectId, repoPath: args.repoPath };
+  const tools = getToolDefinitions(actor.role);
   let totalTokens = lastTokenCount;
   let finalText = '';
   let fatalError: string | null = null;
@@ -144,7 +149,7 @@ export async function spawnOpenAI(args: OpenAISpawnArgs): Promise<OpenAISpawnRes
           body: JSON.stringify({
             model,
             messages: history,
-            tools: TOOL_DEFINITIONS,
+            tools,
             stream: true,
           }),
         },

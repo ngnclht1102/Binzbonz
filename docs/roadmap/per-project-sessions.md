@@ -4,7 +4,7 @@
 
 `actor.session_id` is a single column on the agent row. When the same agent works on multiple projects, the runner resumes the **same** Claude session for all of them — so Project A's conversation history bleeds into Project B's context, and the agent answers questions for one project with assumptions from the other.
 
-This is most painful for shared global agents like `ctbaceo` and `dev-1` who get assigned across many projects. They start mixing decisions, file paths, and code conventions between unrelated codebases.
+This is most painful for shared global agents like `master` and `dev-1` who get assigned across many projects. They start mixing decisions, file paths, and code conventions between unrelated codebases.
 
 We need **one session per (agent, project)** so each project has its own clean conversational context.
 

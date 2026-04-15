@@ -112,7 +112,7 @@ Given `since = agent_session.last_active_at` and `agent_id`, fetch:
 2. **Task status/assignment changes** where `task.updated_at > since` AND task is currently assigned to this agent OR was newly assigned to this agent
 3. **New tasks assigned to this agent** where the assignment happened after `since`
 4. **Memory file changes** where `memory_file.last_updated_at > since`
-5. **New tickets created** in the project where `created_at > since` (only at task level — MVP/Sprint/Epic/Feature changes are noise unless we're CTBACEO)
+5. **New tickets created** in the project where `created_at > since` (only at task level — MVP/Sprint/Epic/Feature changes are noise unless we're Master)
 
 ### Delta prompt format
 
@@ -121,7 +121,7 @@ You were last active at <ISO timestamp>. Here's what happened since then:
 
 ## New comments on your tasks:
 - [task: Setup DB] dev-2 (10:15): "Merged your PR, looks good"
-- [task: Setup DB] ctbaceo (10:20): "Moving to done"
+- [task: Setup DB] master (10:20): "Moving to done"
 
 ## Task changes:
 - "Setup DB" → done (was: review_request)

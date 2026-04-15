@@ -14,6 +14,7 @@ import {
   resetAgentProjectSession,
   deleteActor,
   isOpenAIRole,
+  usesChatSlideUI,
   type Actor,
   type AgentProjectSession,
   type Project,
@@ -22,6 +23,7 @@ import {
 
 const WebTerminal = dynamic(() => import("@/components/web-terminal"), { ssr: false });
 const AgentChat = dynamic(() => import("@/components/agent-chat"), { ssr: false });
+import { LiveStreamPane } from "@/components/live-stream-pane";
 
 const STATUS_DOT: Record<string, string> = {
   idle: "bg-gray-400",
@@ -95,6 +97,17 @@ export default function GlobalAgentDetailPage() {
     }
   }, [sessions, allProjects, terminalProjectId]);
 
+  // When the agent transitions into "working", auto-select the project it's
+  // actually working on (from the processing wake events) in the terminal
+  // project picker — that picker is re-used as the stream-pane project
+  // picker while streaming, so this makes the dropdown reflect reality.
+  useEffect(() => {
+    const current = events.find((e) => e.status === "processing" && e.project_id);
+    if (current && current.project_id !== terminalProjectId) {
+      setTerminalProjectId(current.project_id);
+    }
+  }, [events, terminalProjectId]);
+
   // Default the slide chat target (OpenAI only) to the most recently
   // active project, or any project if none.
   useEffect(() => {
@@ -111,7 +124,7 @@ export default function GlobalAgentDetailPage() {
   // chat always have a valid session id even for "new" projects the bot
   // has never been woken on.
   useEffect(() => {
-    if (!agent || !isOpenAIRole(agent.role) || !slideProjectId) return;
+    if (!agent || !usesChatSlideUI(agent.role) || !slideProjectId) return;
     let cancelled = false;
     ensureAgentProjectSession(agent.id, slideProjectId)
       .then((row) => {
@@ -158,11 +171,11 @@ export default function GlobalAgentDetailPage() {
     .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
 
   // Click handler for any wake event row.
-  //   - OpenAI agents: switch the inline slide chat to the event's project.
-  //   - Claude agents: open the terminal (unchanged).
+  //   - openapicoor: switch the inline slide chat to the event's project.
+  //   - everyone else (claude, master, openapidev): open the terminal.
   const handleEventClick = async (event: WakeEvent) => {
     if (!event.project_id) return;
-    if (isOpenAIRole(agent.role)) {
+    if (usesChatSlideUI(agent.role)) {
       setSlideProjectId(event.project_id);
     } else {
       setTerminalProjectId(event.project_id);
@@ -170,12 +183,17 @@ export default function GlobalAgentDetailPage() {
     }
   };
 
-  const isOpenAI = isOpenAIRole(agent.role);
+  const showsChatSlide = usesChatSlideUI(agent.role);
   const slideProjectName =
     allProjects.find((p) => p.id === slideProjectId)?.name ?? "";
 
+  // Show the live-stream pane for agents that are actively working and
+  // don't already use the chat-slide pattern. openapicoor keeps its chat
+  // slide; claude devs, master, AND openapidev get the stream pane.
+  const showLiveStream = !showsChatSlide && agent.status === "working";
+
   // Project picker dropdown rendered into the chat header when in slide mode.
-  const slideHeaderLeft = isOpenAI ? (
+  const slideHeaderLeft = showsChatSlide ? (
     <div className="flex items-center gap-2 min-w-0 flex-1">
       <span className="shrink-0">🌐</span>
       <span className="font-bold shrink-0 truncate">{agent.name}</span>
@@ -197,10 +215,53 @@ export default function GlobalAgentDetailPage() {
     </div>
   ) : undefined;
 
+  const twoColLayout = showsChatSlide || showLiveStream;
+
+  // Project dropdown rendered into the live-stream pane header — same list
+  // the terminal launcher uses, but here the selection just tracks which
+  // project the agent is currently streaming from. Auto-synced above when
+  // a processing event shows up.
+  const streamHeaderLeft = showLiveStream ? (
+    <div className="flex items-center gap-2 min-w-0 flex-1">
+      <span className="font-semibold text-gray-300 truncate">{agent.name}</span>
+      <span className="text-xs text-gray-500 shrink-0">—</span>
+      <select
+        value={terminalProjectId ?? ""}
+        onChange={(e) => setTerminalProjectId(e.target.value || null)}
+        className="px-2 py-1 bg-gray-800 border border-gray-700 rounded text-xs focus:outline-none focus:border-blue-500 flex-1 min-w-0 max-w-[200px]"
+        title="Switch project"
+      >
+        {projectRows.length === 0 && <option value="">No projects</option>}
+        {projectRows.map(({ project, session }) => (
+          <option key={project.id} value={project.id}>
+            {project.name} {session?.session_id ? "" : "(new)"}
+          </option>
+        ))}
+      </select>
+    </div>
+  ) : undefined;
+
+  // If the user switched the dropdown to a project that isn't the one the
+  // agent is currently working on, show a placeholder instead of the live
+  // buffer — live_output is per-actor, so it always belongs to whichever
+  // project is actively processing right now.
+  const currentProcessingProjectId =
+    events.find((e) => e.status === "processing")?.project_id ?? null;
+  const streamMatchesSelection =
+    !terminalProjectId ||
+    !currentProcessingProjectId ||
+    terminalProjectId === currentProcessingProjectId;
+  const streamOutput = streamMatchesSelection
+    ? agent.live_output ?? null
+    : `(${agent.name} isn't working on this project right now — pick "${
+        allProjects.find((p) => p.id === currentProcessingProjectId)?.name ??
+        "the active project"
+      }" to see the live stream.)`;
+
   return (
-    <div className={isOpenAI ? "p-6 flex gap-6 h-screen" : "p-8 max-w-4xl"}>
-      {/* LEFT column (or only column for Claude agents) */}
-      <div className={isOpenAI ? "flex-1 min-w-0 overflow-y-auto pr-2" : ""}>
+    <div className={twoColLayout ? "p-6 flex gap-6 h-screen" : "p-8 max-w-4xl"}>
+      {/* LEFT column (or only column for idle Claude agents) */}
+      <div className={twoColLayout ? "flex-1 min-w-0 overflow-y-auto pr-2" : ""}>
       <button
         onClick={() => router.push("/agents")}
         className="text-sm text-gray-400 hover:text-gray-200 mb-4 inline-block"
@@ -219,7 +280,7 @@ export default function GlobalAgentDetailPage() {
             <h1 className="text-2xl font-bold">{agent.name}</h1>
             <span
               className={`text-xs px-2 py-0.5 rounded ${
-                agent.role === "ctbaceo"
+                agent.role === "master"
                   ? "bg-purple-500/20 text-purple-400"
                   : agent.role === "openapidev"
                   ? "bg-cyan-500/20 text-cyan-400"
@@ -246,8 +307,11 @@ export default function GlobalAgentDetailPage() {
           </div>
           {/* Launcher: terminal for Claude only. OpenAI agents use the
               always-visible chat slide on the right side of the page, so
-              no launcher is needed here. */}
-          {!isOpenAIRole(agent.role) && (
+              no launcher is needed here. Hidden entirely while the agent
+              is working — the live stream pane on the right takes over,
+              and spawning a second claude here would collide with the
+              headless one the runner already has running. */}
+          {!showsChatSlide && !showLiveStream && (
             <div className="flex items-center gap-2">
               <select
                 value={terminalProjectId ?? ""}
@@ -270,6 +334,11 @@ export default function GlobalAgentDetailPage() {
                 <span>{'>'}_</span> Terminal
               </button>
             </div>
+          )}
+          {!showsChatSlide && showLiveStream && (
+            <span className="text-xs text-gray-500 italic">
+              streaming on the right →
+            </span>
           )}
         </div>
         <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 text-sm">
@@ -339,7 +408,7 @@ export default function GlobalAgentDetailPage() {
                       </td>
                       <td className="px-3 py-2 text-right">
                         <div className="flex items-center justify-end gap-1">
-                          {isOpenAIRole(agent.role) ? (
+                          {usesChatSlideUI(agent.role) ? (
                             <button
                               onClick={() => setSlideProjectId(project.id)}
                               className={`text-xs px-2 py-0.5 rounded transition-colors ${
@@ -443,8 +512,8 @@ export default function GlobalAgentDetailPage() {
       </div>
       {/* /LEFT column */}
 
-      {/* RIGHT column — embedded chat (OpenAI agents only) */}
-      {isOpenAI && (
+      {/* RIGHT column — embedded chat (openapicoor only) */}
+      {showsChatSlide && (
         <div className="w-[480px] shrink-0 h-full">
           {slideSessionId ? (
             <AgentChat
@@ -460,6 +529,19 @@ export default function GlobalAgentDetailPage() {
               {slideProjectId ? "Loading conversation..." : "No projects"}
             </div>
           )}
+        </div>
+      )}
+
+      {/* RIGHT column — live stream pane (Claude agents while working) */}
+      {showLiveStream && (
+        <div className="w-[480px] shrink-0 h-full">
+          <LiveStreamPane
+            agentName={agent.name}
+            output={streamOutput}
+            updatedAt={agent.live_output_updated_at ?? null}
+            headerLeft={streamHeaderLeft}
+            heightClass="h-full"
+          />
         </div>
       )}
 

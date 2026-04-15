@@ -12,6 +12,7 @@ import {
   getAgentProjectSession,
   getAgentProjectSessionWithMessages,
   upsertAgentProjectSession,
+  appendActorLiveOutput,
 } from './api-client.js';
 import {
   buildPrompt,
@@ -95,6 +96,42 @@ function makeProgressTimer(taskId: string | null, actorId: string) {
   };
 }
 
+/**
+ * Stream the agent's stdout into the actors.live_output rolling buffer so
+ * the project agent page can render it on the right side while the agent
+ * is working. Flushes every 1.5s; cleared on idle by actors.service.
+ */
+function makeLiveOutputFlusher(actorId: string) {
+  let buffer = '';
+  const timer = setInterval(() => {
+    if (!buffer) return;
+    const chunk = buffer;
+    buffer = '';
+    appendActorLiveOutput(actorId, chunk).catch(() => {});
+  }, 1500);
+  return {
+    onChunk: (text: string) => { buffer += text; },
+    flush: async () => {
+      clearInterval(timer);
+      if (buffer) {
+        const chunk = buffer;
+        buffer = '';
+        await appendActorLiveOutput(actorId, chunk).catch(() => {});
+      }
+    },
+  };
+}
+
+/** Combine two onChunk callbacks into one (either may be undefined). */
+function composeChunk(
+  a: ((t: string) => void) | undefined,
+  b: ((t: string) => void) | undefined,
+): ((t: string) => void) | undefined {
+  if (!a) return b;
+  if (!b) return a;
+  return (t: string) => { a(t); b(t); };
+}
+
 async function runClaudeWake(
   event: WakeEvent,
   actor: Actor,
@@ -112,7 +149,10 @@ async function runClaudeWake(
   let { prompt, isNewSession } = await buildPrompt(event, actor, sessionState);
   log("runner",` >>> Processing: ${actor.name} (${event.triggered_by})${taskId ? ` on task ${taskId.slice(0, 8)}` : ''} [${isNewSession ? 'NEW session' : 'RESUME ' + sessionState.session_id?.slice(0, 8)}] prompt=${prompt.length} chars`);
 
-  const { onChunk, flush } = makeProgressTimer(taskId, actor.id);
+  const progress = makeProgressTimer(taskId, actor.id);
+  const live = makeLiveOutputFlusher(actor.id);
+  const onChunk = composeChunk(progress.onChunk, live.onChunk);
+  const flush = async () => { await progress.flush(); await live.flush(); };
 
   // Fix 4: Persist session_id the moment claude announces it (in the
   // system/init event, ~100ms after spawn). If the runner crashes or
@@ -238,18 +278,37 @@ async function runOpenAIWake(
 
   log("runner",` >>> Processing: ${actor.name} (${event.triggered_by})${taskId ? ` on task ${taskId.slice(0, 8)}` : ''} [${history.length === 0 ? 'NEW session' : 'RESUME (' + history.length + ' msgs)'}] provider=${actorWithSecrets.provider_model}`);
 
-  const { onChunk, flush } = makeProgressTimer(taskId, actor.id);
+  const progress = makeProgressTimer(taskId, actor.id);
+  // Only OpenAI agents WITHOUT a heartbeat get the live_output stream — the
+  // heartbeat-enabled ones already render their activity on the global agent
+  // page's chat slide, and duplicating it on the project page would just be
+  // noise.
+  const live = actor.heartbeat_enabled
+    ? null
+    : makeLiveOutputFlusher(actor.id);
+  const onChunk = composeChunk(progress.onChunk, live?.onChunk);
+  const flush = async () => {
+    await progress.flush();
+    if (live) await live.flush();
+  };
   // Tool note callback — fires once per tool round, posts a brief
   // "🛠 calling X..." comment so the UI shows activity during silent rounds.
-  const onToolNote = taskId
-    ? (text: string) => {
-        postComment(taskId, actor.id, text, 'update').catch(() => {});
-      }
-    : undefined;
+  // Also folded into the live_output stream so the project agent page shows
+  // something during tool-heavy rounds where no assistant text is emitted.
+  const onToolNote =
+    taskId || live
+      ? (text: string) => {
+          if (taskId) {
+            postComment(taskId, actor.id, text, 'update').catch(() => {});
+          }
+          if (live) live.onChunk(`\n${text}\n`);
+        }
+      : undefined;
 
   const result = await spawnOpenAI({
     actor: actorWithSecrets,
     projectId: event.project_id,
+    repoPath: project.repo_path ?? null,
     history,
     userMessage,
     systemMessage,
@@ -304,12 +363,12 @@ async function processEvent(eventId: string): Promise<void> {
     const project = await getProject(event.project_id);
 
     // Gate check: project status.
-    // In `analysing` / `paused`, only ctbaceo may work — every other agent
+    // In `analysing` / `paused`, only master may work — every other agent
     // (developers and openapi* coordinators) is paused until the project
     // moves to `active`.
     if (
       (project.status === 'analysing' || project.status === 'paused') &&
-      actor.role !== 'ctbaceo'
+      actor.role !== 'master'
     ) {
       log("runner",` Skipping ${actor.name}: project is ${project.status}`);
       await updateWakeEvent(eventId, 'skipped');

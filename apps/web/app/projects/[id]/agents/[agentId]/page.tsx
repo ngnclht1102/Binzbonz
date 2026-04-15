@@ -2,6 +2,7 @@
 import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import dynamic from "next/dynamic";
+import { LiveStreamPane } from "@/components/live-stream-pane";
 import {
   getActor,
   getProject,
@@ -9,6 +10,7 @@ import {
   getAgentProjectSession,
   ensureAgentProjectSession,
   isOpenAIRole,
+  usesChatSlideUI,
   type Actor,
   type AgentProjectSession,
   type Project,
@@ -20,7 +22,7 @@ const AgentChat = dynamic(() => import("@/components/agent-chat"), { ssr: false 
 
 const ROLE_BADGE: Record<string, string> = {
   developer: "bg-blue-500/20 text-blue-400",
-  ctbaceo: "bg-purple-500/20 text-purple-400",
+  master: "bg-purple-500/20 text-purple-400",
   openapidev: "bg-cyan-500/20 text-cyan-400",
   openapicoor: "bg-pink-500/20 text-pink-400",
 };
@@ -84,10 +86,20 @@ export default function AgentDetailPage() {
   const pending = events.filter((e) => e.status === "pending");
   const history = events.filter((e) => ["done", "failed", "skipped"].includes(e.status));
 
+  // Show the live-stream pane on the right when the agent is actively
+  // working — but skip it for heartbeat openapicoor agents, which already
+  // show their stream on the global agent page's chat slide. openapidev
+  // now goes through the regular developer UI and always gets the stream.
+  const showLiveStream =
+    agent.status === "working" &&
+    !(usesChatSlideUI(agent.role) && agent.heartbeat_enabled);
+
   // Click handler for event rows — opens the right modal for this agent.
   // Project context is already known here, so we don't need to look it up.
+  // openapicoor opens the chat modal; everyone else (claude devs, master,
+  // openapidev) gets the terminal.
   const handleEventClick = async () => {
-    if (isOpenAIRole(agent.role)) {
+    if (usesChatSlideUI(agent.role)) {
       try {
         const row = await ensureAgentProjectSession(agentId, projectId);
         setSession(row);
@@ -101,7 +113,14 @@ export default function AgentDetailPage() {
   };
 
   return (
-    <div className="p-8 max-w-4xl">
+    <div
+      className={`p-8 ${
+        showLiveStream
+          ? "max-w-6xl lg:grid lg:grid-cols-[minmax(0,1fr)_minmax(0,440px)] lg:gap-6"
+          : "max-w-4xl"
+      }`}
+    >
+      <div className="min-w-0">
       {/* Back link */}
       <button
         onClick={() => router.push(`/projects/${projectId}/agents`)}
@@ -128,7 +147,14 @@ export default function AgentDetailPage() {
             </span>
             <span className="text-sm text-gray-400">{agent.status}</span>
           </div>
-          {isOpenAIRole(agent.role) ? (
+          {showLiveStream ? (
+            // Agent is working — the action button would spawn a second
+            // claude and collide with the one already running, so we hide
+            // it and let the right-side stream pane speak for the agent.
+            <span className="text-xs text-gray-500 italic">
+              streaming on the right →
+            </span>
+          ) : usesChatSlideUI(agent.role) ? (
             <button
               onClick={async () => {
                 setOpeningChat(true);
@@ -241,6 +267,19 @@ export default function AgentDetailPage() {
           projectName={project?.name ?? "this project"}
           onClose={() => setShowChat(false)}
         />
+      )}
+      </div>
+
+      {/* Right-side live stream pane — only mounted while working, and
+          only for agents that don't already have their own streaming UI. */}
+      {showLiveStream && (
+        <div className="mt-6 lg:mt-0 lg:sticky lg:top-8 lg:self-start">
+          <LiveStreamPane
+            agentName={agent.name}
+            output={agent.live_output ?? null}
+            updatedAt={agent.live_output_updated_at ?? null}
+          />
+        </div>
       )}
     </div>
   );

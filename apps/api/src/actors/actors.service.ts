@@ -16,6 +16,8 @@ import { ProviderConfigDto } from './dto/provider-config.dto.js';
 
 const OPENAPI_ROLES = new Set(['openapidev', 'openapicoor']);
 
+const LIVE_OUTPUT_MAX_BYTES = 128 * 1024;
+
 @Injectable()
 export class ActorsService {
   constructor(
@@ -61,6 +63,32 @@ export class ActorsService {
   async update(id: string, dto: UpdateActorDto) {
     const actor = await this.findOneRaw(id);
     Object.assign(actor, dto);
+    // When a caller flips an actor back to idle (runner does this at the end
+    // of every wake), atomically clear the live_output tail so the UI stops
+    // showing stale progress from the last run.
+    if (dto.status === 'idle') {
+      actor.live_output = null;
+      actor.live_output_updated_at = null;
+    }
+    const saved = await this.repo.save(actor);
+    return redactActor(saved);
+  }
+
+  /**
+   * Append a chunk of agent stdout to the rolling live_output buffer.
+   * Drops from the front to stay under LIVE_OUTPUT_MAX_BYTES. Called by
+   * the agent-runner roughly every 1.5s while a wake is in flight.
+   */
+  async appendLiveOutput(id: string, chunk: string) {
+    if (!chunk) return redactActor(await this.findOneRaw(id));
+    const actor = await this.findOneRaw(id);
+    const existing = actor.live_output ?? '';
+    let next = existing + chunk;
+    if (next.length > LIVE_OUTPUT_MAX_BYTES) {
+      next = next.slice(next.length - LIVE_OUTPUT_MAX_BYTES);
+    }
+    actor.live_output = next;
+    actor.live_output_updated_at = new Date();
     const saved = await this.repo.save(actor);
     return redactActor(saved);
   }

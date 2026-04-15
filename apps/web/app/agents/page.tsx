@@ -11,7 +11,7 @@ const STATUS_DOT: Record<string, string> = {
 
 const ROLE_BADGE: Record<string, string> = {
   developer: "bg-blue-500/20 text-blue-400",
-  ctbaceo: "bg-purple-500/20 text-purple-400",
+  master: "bg-purple-500/20 text-purple-400",
   openapidev: "bg-cyan-500/20 text-cyan-400",
   openapicoor: "bg-pink-500/20 text-pink-400",
 };
@@ -98,7 +98,7 @@ function CreateAgentDialog({ onClose, onCreated }: { onClose: () => void; onCrea
   const [providerType, setProviderType] = useState<ProviderType>("claude");
 
   // Claude-only state
-  const [claudeRole, setClaudeRole] = useState<"developer" | "ctbaceo">("developer");
+  const [claudeRole, setClaudeRole] = useState<"developer" | "master">("developer");
 
   // OpenAI-only state
   const [openapiRole, setOpenapiRole] = useState<"openapidev" | "openapicoor">("openapicoor");
@@ -239,11 +239,11 @@ function CreateAgentDialog({ onClose, onCreated }: { onClose: () => void; onCrea
               <label className="block text-xs font-medium text-gray-500 uppercase mb-1">Role</label>
               <select
                 value={claudeRole}
-                onChange={(e) => setClaudeRole(e.target.value as "developer" | "ctbaceo")}
+                onChange={(e) => setClaudeRole(e.target.value as "developer" | "master")}
                 className="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded text-sm focus:outline-none focus:border-blue-500"
               >
                 <option value="developer">developer — writes code</option>
-                <option value="ctbaceo">ctbaceo — coordinates devs</option>
+                <option value="master">master — coordinates devs</option>
               </select>
             </div>
           )}

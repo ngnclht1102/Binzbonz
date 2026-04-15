@@ -61,6 +61,13 @@ export const updateActor = (id: string, data: Partial<Actor>) =>
     body: JSON.stringify(data),
   });
 
+/** Append a chunk to the actor's live_output tail (128KB rolling buffer). */
+export const appendActorLiveOutput = (id: string, chunk: string) =>
+  request<Actor>(`/actors/${id}/live-output`, {
+    method: 'PATCH',
+    body: JSON.stringify({ chunk }),
+  });
+
 export const postComment = (taskId: string, actorId: string, body: string, commentType = 'update') =>
   request<Comment>(`/tasks/${taskId}/comments`, {
     method: 'POST',
@@ -130,7 +137,7 @@ export const listIdleDevelopers = () =>
   request<Actor[]>(`/actors?type=agent&role=developer&status=idle`);
 
 /** Post a comment on the project itself (not on any task). Used by the
- *  coordinator when a project has no tasks and it needs to wake ctbaceo
+ *  coordinator when a project has no tasks and it needs to wake master
  *  to break down the brief. Mentions in the body will still trigger wake
  *  events via the mention parser. */
 export const postProjectComment = (

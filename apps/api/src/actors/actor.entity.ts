@@ -17,7 +17,7 @@ export class Actor {
   type!: string; // human | agent
 
   @Column({ type: 'text', nullable: true })
-  role!: string | null; // developer | ctbaceo | openapidev | openapicoor | null
+  role!: string | null; // developer | master | openapidev | openapicoor | null
 
   @Column({ type: 'text', nullable: true })
   avatar_url!: string | null;
@@ -47,6 +47,16 @@ export class Actor {
 
   @Column({ type: 'timestamptz', nullable: true })
   heartbeat_last_at!: Date | null;
+
+  // Live output tail — rolling buffer of the agent's stdout while it's
+  // working, shown on the project-scoped agent page. Capped to ~128KB; the
+  // runner streams chunks in and the actors.service drops from the front
+  // when the cap is hit. Cleared atomically when status flips back to idle.
+  @Column({ type: 'text', nullable: true })
+  live_output!: string | null;
+
+  @Column({ type: 'timestamptz', nullable: true })
+  live_output_updated_at!: Date | null;
 
   @CreateDateColumn({ type: 'timestamptz' })
   created_at!: Date;

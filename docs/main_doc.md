@@ -5,7 +5,7 @@
 
 ## 1. Overview
 
-A self-hosted platform that orchestrates a flat pool of Claude Code agents to autonomously build software projects. Humans define projects via a brief. CTBACEO agent analyses the brief, creates the full ticket hierarchy, assigns developers, and drives progress. Developers are event-driven — they wake only when mentioned. All agents share project memory as source of truth.
+A self-hosted platform that orchestrates a flat pool of Claude Code agents to autonomously build software projects. Humans define projects via a brief. Master agent analyses the brief, creates the full ticket hierarchy, assigns developers, and drives progress. Developers are event-driven — they wake only when mentioned. All agents share project memory as source of truth.
 
 ---
 
@@ -17,15 +17,15 @@ Everyone in the system is an actor — human or agent.
 | Type | Role | Wakes On |
 |---|---|---|
 | Human | — | — (uses UI) |
-| Agent | `ctbaceo` | Heartbeat every 5 min |
+| Agent | `master` | Heartbeat every 5 min |
 | Agent | `developer` | @mention in comment |
 
 ### 2.2 Project Lifecycle
 ```
 created → analysing → paused → active → completed
 ```
-- `analysing` — CTBACEO only, breaking down brief into tickets
-- `paused` — CTBACEO only, restructuring or waiting for human input
+- `analysing` — Master only, breaking down brief into tickets
+- `paused` — Master only, restructuring or waiting for human input
 - `active` — all agents work
 - `completed` — read only
 
@@ -45,9 +45,9 @@ Project
 ### 2.4 Agent Model
 - All agents have equal permissions (`--dangerously-skip-permissions`)
 - All developers share the same `developer.md` skill (via CLAUDE.md)
-- CTBACEO has its own `ctbaceo.md` skill
+- Master has its own `master.md` skill
 - No org chart, no delegation chain, no permission logic
-- Anyone (human or CTBACEO) can create new agents
+- Anyone (human or Master) can create new agents
 
 ### 2.5 Session Management
 - Each agent has one persistent Claude session (`session_id`)
@@ -67,13 +67,13 @@ Project
 - Lives at `project/memory/` — real markdown files, git-tracked
 - All agents read natively via CLAUDE.md instructions
 - Agents propose memory updates via `memory_update` comment type
-- CTBACEO reviews, applies, and commits all memory changes
+- Master reviews, applies, and commits all memory changes
 - On agent wake, runner injects only files changed since last active
 
 ### 2.8 Communication
 - All communication happens via ticket comments
 - @mentions trigger immediate wake of target agent
-- CTBACEO scans all tasks on heartbeat, pings stuck agents
+- Master scans all tasks on heartbeat, pings stuck agents
 - comment_type drives behaviour: `update` | `block` | `question` | `review_request` | `handoff` | `memory_update`
 
 ---
@@ -83,16 +83,16 @@ Project
 | ID | Requirement |
 |---|---|
 | BR-01 | Human creates a project by providing a name and plain-text brief |
-| BR-02 | CTBACEO automatically analyses brief and creates full ticket hierarchy |
-| BR-03 | CTBACEO assigns available developers to tasks evenly |
+| BR-02 | Master automatically analyses brief and creates full ticket hierarchy |
+| BR-03 | Master assigns available developers to tasks evenly |
 | BR-04 | Developers wake only when @mentioned, not on a schedule |
-| BR-05 | CTBACEO runs on a heartbeat and pings stuck/idle agents |
+| BR-05 | Master runs on a heartbeat and pings stuck/idle agents |
 | BR-06 | Any actor can create a new developer agent |
 | BR-07 | All agents share project memory as source of truth |
-| BR-08 | Memory updates are proposed via comments and applied by CTBACEO |
+| BR-08 | Memory updates are proposed via comments and applied by Master |
 | BR-09 | Each task gets an isolated git worktree branched from latest main |
 | BR-10 | Worktree is created by developer when starting, deleted after merge |
-| BR-11 | Project can be paused — only CTBACEO works when paused |
+| BR-11 | Project can be paused — only Master works when paused |
 | BR-12 | No login required — users identified by name stored in localStorage |
 | BR-13 | Agent context is compacted at 900k tokens, never cold-restarted |
 | BR-14 | All agent communication is via ticket comments, fully auditable |
@@ -182,7 +182,7 @@ Project
 │   └── src/
 ├── skills/
 │   ├── developer.md
-│   └── ctbaceo.md
+│   └── master.md
 ├── pnpm-workspace.yaml
 ├── turbo.json
 └── package.json
@@ -196,7 +196,7 @@ actor
   id                uuid PK
   name              text unique
   type              text          -- human | agent
-  role              text          -- developer | ctbaceo | null
+  role              text          -- developer | master | null
   avatar_url        text
   session_id        text
   last_token_count  int default 0
@@ -291,7 +291,7 @@ poll wake_events every 2s for status = pending
 for each event:
   → mark status = processing
   → load actor + project
-  → if project.status in (analysing, paused) and role != ctbaceo → skip
+  → if project.status in (analysing, paused) and role != master → skip
   → if actor.last_token_count > 960k → inject compact immediately
   → else if actor.last_token_count > 900k → inject /compact prompt
   → else → build delta prompt (new comments + memory changes)
@@ -350,7 +350,7 @@ git branch -d task/<id>
 skills/
   developer.md    -- fullstack dev, self-QA, testing, worktree setup,
                      definition of done, memory read instructions
-  ctbaceo.md      -- planning, breakdown, assignment, coordination,
+  master.md      -- planning, breakdown, assignment, coordination,
                      QA review, memory guardianship, agent creation,
                      heartbeat scan behaviour
 ```
@@ -358,7 +358,7 @@ Both loaded natively via project `CLAUDE.md`.
 
 ### 4.12 Seed Data
 Always seeded on dev startup (idempotent, runs after migrations):
-- 1 CTBACEO agent
+- 1 Master agent
 - 6 developer agents (dev-1 through dev-6)
 - 1 human actor (brian)
 

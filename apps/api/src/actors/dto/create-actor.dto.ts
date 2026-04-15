@@ -8,7 +8,7 @@ export class CreateActorDto {
   type!: string;
 
   @IsOptional()
-  @IsIn(['developer', 'ctbaceo', 'openapidev', 'openapicoor'])
+  @IsIn(['developer', 'master', 'openapidev', 'openapicoor'])
   role?: string;
 
   @IsOptional()

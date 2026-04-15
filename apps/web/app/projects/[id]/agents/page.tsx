@@ -130,7 +130,7 @@ export default function AgentPoolPage() {
               <div className="flex items-center gap-2">
                 <span
                   className={`text-xs px-1.5 py-0.5 rounded ${
-                    agent.role === "ctbaceo"
+                    agent.role === "master"
                       ? "bg-purple-500/20 text-purple-400"
                       : "bg-blue-500/20 text-blue-400"
                   }`}

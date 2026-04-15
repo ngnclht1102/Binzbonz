@@ -52,6 +52,18 @@ export class ActorsController {
     return this.service.update(id, dto);
   }
 
+  // Append a chunk to the live_output tail. Called by agent-runner ~1.5s
+  // while a wake is in flight. Kept separate from PATCH /:id so it doesn't
+  // collide with arbitrary field updates and so the cap/clear logic lives
+  // in one place.
+  @Patch(':id/live-output')
+  appendLiveOutput(
+    @Param('id') id: string,
+    @Body() dto: { chunk: string },
+  ) {
+    return this.service.appendLiveOutput(id, dto?.chunk ?? '');
+  }
+
   @Delete(':id')
   remove(@Param('id') id: string) {
     return this.service.remove(id);
