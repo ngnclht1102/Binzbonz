@@ -8,6 +8,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, MoreThan } from 'typeorm';
 import { Task } from './task.entity.js';
 import { WakeEvent } from '../wake-events/wake-event.entity.js';
+import { Project } from '../projects/project.entity.js';
 import { CreateTaskDto } from './dto/create-task.dto.js';
 import { UpdateTaskDto } from './dto/update-task.dto.js';
 
@@ -35,6 +36,8 @@ export class TasksService {
     private readonly repo: Repository<Task>,
     @InjectRepository(WakeEvent)
     private readonly wakeEventRepo: Repository<WakeEvent>,
+    @InjectRepository(Project)
+    private readonly projectRepo: Repository<Project>,
   ) {}
 
   findByFeature(featureId: string) {
@@ -161,6 +164,25 @@ export class TasksService {
     if (isNewAssignment && dto.assigned_agent_id) {
       const projectId = await this.resolveProjectId(id);
       if (projectId) {
+        // Auto-transition the project to `active` on any new assignment.
+        // Once someone (master or human) is handing work to a dev, the
+        // `analysing` / `paused` gates should drop so the runner will wake
+        // the assignee. Master-only states no longer apply.
+        await this.projectRepo
+          .createQueryBuilder()
+          .update()
+          .set({ status: 'active' })
+          .where('id = :projectId', { projectId })
+          .andWhere('status IN (:...gated)', { gated: ['analysing', 'paused'] })
+          .execute()
+          .then((result) => {
+            if (result.affected && result.affected > 0) {
+              this.logger.log(
+                `Project ${projectId.slice(0, 8)}: auto-transitioned to active (task ${id.slice(0, 8)} assigned)`,
+              );
+            }
+          });
+
         const recentCutoff = new Date(Date.now() - 60_000);
         const existing = await this.wakeEventRepo.findOne({
           where: [

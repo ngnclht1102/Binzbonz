@@ -1,6 +1,9 @@
 #!/bin/bash
 # Binzbonz — kill stale processes and start all services
 
+echo "🧹 Installing..."
+pnpm install
+
 echo "🧹 Cleaning up stale processes..."
 
 # Kill by port

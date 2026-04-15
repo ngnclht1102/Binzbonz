@@ -168,6 +168,7 @@ export default function MentionInput({
 
   return (
     <div className="relative flex-1">
+      <span className="text-sm">Mention to wake the agent up</span>
       <input
         ref={inputRef}
         type="text"

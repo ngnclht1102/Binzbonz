@@ -6,37 +6,50 @@ Give it a name and a paragraph describing what you want built. A Master agent br
 
 No cloud. No per-token billing. No SaaS. Runs on the Claude Max subscription you already have, plus any OpenAI-compatible model for the cheap coordination work.
 
-![Binzbonz multi-project dashboard](demo/multi-project-dashboard.png)
+Binzbonz multi-project dashboard
+
+## Quick Start
+
+```bash
+# Requires Node.js >= 20 and pnpm >= 10
+git clone https://github.com/ngnclht1102/Binzbonz.git
+cd Binzbonz
+./start.sh
+```
 
 ---
 
 ## In pictures
 
 ### Multi-project dashboard
+
 One flat pool of agents, any project can borrow any dev.
 
-![Multi-project dashboard](demo/multi-project-dashboard.png)
+Multi-project dashboard
 
 ### Hierarchical tickets
+
 MVP → Sprint → Epic → Feature → Task, generated from your brief.
 
-![Ticket hierarchy](demo/ticket-hierarchy.png)
+Ticket hierarchy
 
 ### Resumable Claude sessions
+
 Open a terminal to any agent and jump into its live conversation.
 
-![Resumable Claude session](demo/resumable-claude-session.png)
+Resumable Claude session
 
 ### Per-project session isolation
+
 The same `dev-2` has separate context per project. No bleed.
 
-![Per-project sessions](demo/per-project-sessions.png)
+Per-project sessions
 
 ### Heartbeat coordinators
+
 An OpenAI-compatible agent (DeepSeek here) scans projects on a schedule and nudges stuck work. Costs cents a day.
 
-![Heartbeat coordinator](demo/heartbeat-coordinator.png)
-
+Heartbeat coordinator
 
 ---
 
@@ -52,7 +65,7 @@ Most orchestration platforms burn tokens on the same three problems: they rebuil
 
 ## 1. How Binzbonz keeps the session alive
 
-![Resumable Claude session](demo/resumable-claude-session.png)
+Resumable Claude session
 
 Every agent has a **persistent Claude session** that survives across wake events, runner crashes, and even laptop reboots. The agent's conversation history — the skill file it already read, the code it already looked at, the decisions it already made — is never thrown away.
 
@@ -73,7 +86,7 @@ agent_project_session
 
 The runner never reads from a global `actor.session_id`. The lookup is always *"give me the session for (this agent, this project)."* That's why the same `dev-2` can work on two projects with completely separate conversations — each project has its own row.
 
-![Per-project sessions for one agent](demo/per-project-sessions.png)
+Per-project sessions for one agent
 
 In the screenshot above, `dev-2` has two active sessions: one for `sway` (13 tokens) and one for `NamNguyenHomePage` (47 tokens). Neither knows the other exists.
 
@@ -117,7 +130,7 @@ When you click **>_ Terminal** on an agent in a project context, the WebSocket g
 
 ## 2. How Binzbonz injects project data into context
 
-![Ticket hierarchy](demo/ticket-hierarchy.png)
+Ticket hierarchy
 
 Every wake event gives the agent a freshly-built **wake message** — a structured summary of everything it needs to know to act, and nothing it doesn't.
 
@@ -321,8 +334,9 @@ Compared to a "rebuild on every run" platform sending 4,000-token prompts every 
 
 ```bash
 # Requires Node.js >= 20 and pnpm >= 10
-pnpm install
-pnpm dev
+git clone https://github.com/ngnclht1102/Binzbonz.git
+cd Binzbonz
+./start.sh
 ```
 
 First boot:
